@@ -1,10 +1,10 @@
 # Text Typewriter
 
-A powerful and flexible typewriter effect library for React applications.
+A powerful and flexible typewriter effect library for web applications.
 
 ## Introduction
 
-Text Typewriter is a feature-rich library that brings dynamic typing animations to your React projects. It offers a wide range of customization options, including various text effects, cursor styles, and typing speeds. Whether you're creating an interactive landing page, a creative portfolio, or just want to add some flair to your text content, Text Typewriter has you covered.
+Text Typewriter is a feature-rich library that brings dynamic typing animations to your web projects. It offers seamless integration with React applications and can also be used with vanilla JavaScript. The library provides a wide range of customization options, including various text effects, cursor styles, and typing speeds. Whether you're creating an interactive landing page, a creative portfolio, or just want to add some flair to your text content, Text Typewriter has you covered.
 
 ## Features
 
