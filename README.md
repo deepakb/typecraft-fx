@@ -165,28 +165,16 @@ If you're not using React, you can still use Text Typewriter with vanilla JavaSc
 
 ### TypewriterOptions
 
-| Option        | Type                     | Default             | Description                                     |
-| ------------- | ------------------------ | ------------------- | ----------------------------------------------- | --------------- |
-| `strings`     | `string[]`               | `[]`                | Array of strings to type out.                   |
-| `autoStart`   | `boolean`                | `false`             | Whether to start typing automatically.          |
-| `loop`        | `boolean`                | `false`             | Whether to loop the typing sequence.            |
-| `deleteSpeed` | `number`                 | `50`                | Speed of deletion in milliseconds.              |
-| `delay`       | `number`                 | `1500`              | Delay between typing sequences in milliseconds. |
-| `cursor`      | `Partial<CursorOptions>` | `{ text: '          | ', color: 'black' }`                            | Cursor options. |
-| `cursorStyle` | `CursorStyle`            | `CursorStyle.Solid` | Style of the cursor.                            |
-| `textEffect`  | `TextEffect`             | `TextEffect.None`   | Text effect to apply.                           |
-
-## Contributing
-
-We welcome contributions to Text Typewriter! If you'd like to contribute, please follow these steps:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-Please make sure to update tests as appropriate and adhere to the existing coding style.
+| Option        | Type                     | Default                          | Description                                     |
+| ------------- | ------------------------ | -------------------------------- | ----------------------------------------------- |
+| `strings`     | `string[]`               | `[]`                             | Array of strings to type out.                   |
+| `autoStart`   | `boolean`                | `false`                          | Whether to start typing automatically.          |
+| `loop`        | `boolean`                | `false`                          | Whether to loop the typing sequence.            |
+| `deleteSpeed` | `number`                 | `50`                             | Speed of deletion in milliseconds.              |
+| `delay`       | `number`                 | `1500`                           | Delay between typing sequences in milliseconds. |
+| `cursor`      | `Partial<CursorOptions>` | `{ text: '\|', color: 'black' }` | Cursor options.                                 |
+| `cursorStyle` | `CursorStyle`            | `CursorStyle.Solid`              | Style of the cursor.                            |
+| `textEffect`  | `TextEffect`             | `TextEffect.None`                | Text effect to apply.                           |
 
 ### Development Setup
 
