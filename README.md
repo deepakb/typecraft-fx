@@ -203,4 +203,4 @@ TypecraftFX is open-source software licensed under the MIT license. See the [LIC
 
 ## Support
 
-If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/yourusername/typecraft-fx/issues).ibraries.
+If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/deepakb/typecraft-fx/issues) libraries.
