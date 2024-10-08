@@ -42,11 +42,15 @@ Note: Replace `@latest` with a specific version number if you want to use a part
 
 ### Eager Loading (smaller bundle, no code splitting)
 
+```jsx
 import { Typecraft } from 'text-typecraft';
+```
 
 ### Lazy Loading (larger initial bundle, but with code splitting)
 
+```jsx
 import { TypecraftComponent } from 'text-typecraft';
+```
 
 ```jsx
 import React from 'react';
