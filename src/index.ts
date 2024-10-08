@@ -1,5 +1,5 @@
-export { Typewriter } from './core/Typewriter';
-export { TypewriterComponent } from './react/Typewriter';
-export { TypewriterComponentWithSuspense } from './react/TypewriterComponentLazy';
+export { TypecraftEngine } from './core/TypecraftEngine';
+export { TypecraftComponentWithSuspense as TypecraftComponent } from './react/TypecraftComponentLazy';
 export { Direction, CursorStyle, TextEffect } from './core/types';
-export type { TypewriterOptions } from './core/types';
+export type { TypecraftOptions } from './core/types';
+export { useTypecraft } from './react/useTypecraft';

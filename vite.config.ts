@@ -13,9 +13,9 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'TextTypewriter',
+      name: 'TypecraftFX',
       formats: ['es', 'umd'],
-      fileName: (format) => `text-typewriter.${format}.js`,
+      fileName: (format) => `typecraft-fx.${format}.js`,
     },
     rollupOptions: {
       external: ['react', 'react-dom'],

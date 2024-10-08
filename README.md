@@ -1,10 +1,10 @@
-# Text Typewriter
+# TypecraftFX
 
-A powerful and flexible typewriter effect library for web applications.
+A powerful and flexible typecraft effect library for React applications.
 
 ## Introduction
 
-Text Typewriter is a feature-rich library that brings dynamic typing animations to your web projects. It offers seamless integration with React applications and can also be used with vanilla JavaScript. The library provides a wide range of customization options, including various text effects, cursor styles, and typing speeds. Whether you're creating an interactive landing page, a creative portfolio, or just want to add some flair to your text content, Text Typewriter has you covered.
+TypecraftFX is a feature-rich library that brings dynamic typing animations to your web projects. It offers seamless integration with React applications and can also be used with vanilla JavaScript. The library provides a wide range of customization options, including various text effects, cursor styles, and typing speeds. Whether you're creating an interactive landing page, a creative portfolio, or just want to add some flair to your text content, TypecraftFX has you covered.
 
 ## Features
 
@@ -22,16 +22,16 @@ Text Typewriter is a feature-rich library that brings dynamic typing animations 
 
 ## Installation
 
-You can install Text Typewriter using npm:
+You can install TypecraftFX using npm:
 
 ```bash
-npm install text-typewriter
+npm install text-typecraft
 ```
 
 For those who prefer to use a CDN, you can include the following script tag in your HTML file:
 
 ```html
-<script src="https://unpkg.com/text-typewriter/dist/text-typewriter.min.js"></script>
+<script src="https://unpkg.com/text-typecraft/dist/text-typecraft.min.js"></script>
 ```
 
 Note: Replace `@latest` with a specific version number if you want to use a particular version of the library.
@@ -40,19 +40,27 @@ Note: Replace `@latest` with a specific version number if you want to use a part
 
 ### Basic Usage with React
 
+### Eager Loading (smaller bundle, no code splitting)
+
+import { Typecraft } from 'text-typecraft';
+
+### Lazy Loading (larger initial bundle, but with code splitting)
+
+import { TypecraftComponent } from 'text-typecraft';
+
 ```jsx
 import React from 'react';
-import { TypewriterComponent } from 'text-typewriter';
+import { TypecraftComponent } from 'text-typecraft';
 
 const MyComponent = () => {
   return (
-    <TypewriterComponent
-      onInit={(typewriter) => {
-        typewriter
+    <TypecraftComponent
+      onInit={(typecraft) => {
+        typecraft
           .typeString('Hello World!')
           .pauseFor(2000)
           .deleteAll()
-          .typeString('Welcome to Text Typewriter')
+          .typeString('Welcome to TypecraftFX')
           .start();
       }}
     />
@@ -66,11 +74,11 @@ export default MyComponent;
 
 ```jsx
 import React from 'react';
-import { TypewriterComponent, TextEffect, CursorStyle } from 'text-typewriter';
+import { TypecraftComponent, TextEffect, CursorStyle } from 'text-typecraft';
 
 const AdvancedComponent = () => {
   return (
-    <TypewriterComponent
+    <TypecraftComponent
       options={{
         strings: ['First sentence.', 'Second sentence.'],
         autoStart: true,
@@ -78,8 +86,8 @@ const AdvancedComponent = () => {
         deleteSpeed: 50,
         delay: 100,
       }}
-      onInit={(typewriter) => {
-        typewriter
+      onInit={(typecraft) => {
+        typecraft
           .changeTextEffect(TextEffect.FadeIn)
           .typeString('This text will fade in.')
           .pauseFor(1000)
@@ -97,7 +105,7 @@ export default AdvancedComponent;
 
 ### Usage with Vanilla JavaScript
 
-If you're not using React, you can still use Text Typewriter with vanilla JavaScript:
+If you're not using React, you can still use TypecraftFX with vanilla JavaScript:
 
 ```html
 <!doctype html>
@@ -105,25 +113,25 @@ If you're not using React, you can still use Text Typewriter with vanilla JavaSc
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Text Typewriter Demo</title>
-    <script src="https://unpkg.com/text-typewriter@latest/dist/text-typewriter.umd.js"></script>
+    <title>TypecraftFX Demo</title>
+    <script src="https://unpkg.com/text-typecraft@latest/dist/text-typecraft.umd.js"></script>
   </head>
   <body>
-    <div id="typewriter"></div>
+    <div id="typecraft"></div>
 
     <script>
       document.addEventListener('DOMContentLoaded', function () {
-        const element = document.getElementById('typewriter');
-        const typewriter = new Typewriter(element, {
+        const element = document.getElementById('typecraft');
+        const typecraft = new Typecraft(element, {
           loop: true,
           delay: 75,
         });
 
-        typewriter
+        typecraft
           .typeString('Hello World!')
           .pauseFor(1000)
           .deleteAll()
-          .typeString('Welcome to Text Typewriter')
+          .typeString('Welcome to TypecraftFX')
           .pauseFor(1000)
           .start();
       });
@@ -134,23 +142,23 @@ If you're not using React, you can still use Text Typewriter with vanilla JavaSc
 
 ## API Reference
 
-### TypewriterComponent Props
+### TypecraftComponent Props
 
-| Prop               | Type                               | Description                                              |
-| ------------------ | ---------------------------------- | -------------------------------------------------------- |
-| `onInit`           | `(typewriter: Typewriter) => void` | Callback function that receives the Typewriter instance. |
-| `options`          | `Partial<TypewriterOptions>`       | Configuration options for the Typewriter.                |
-| `onTypeStart`      | `EventCallback`                    | Callback fired when typing starts.                       |
-| `onTypeChar`       | `EventCallback`                    | Callback fired when a character is typed.                |
-| `onTypeComplete`   | `EventCallback`                    | Callback fired when typing is complete.                  |
-| `onDeleteStart`    | `EventCallback`                    | Callback fired when deletion starts.                     |
-| `onDeleteChar`     | `EventCallback`                    | Callback fired when a character is deleted.              |
-| `onDeleteComplete` | `EventCallback`                    | Callback fired when deletion is complete.                |
-| `onPauseStart`     | `EventCallback`                    | Callback fired when a pause starts.                      |
-| `onPauseEnd`       | `EventCallback`                    | Callback fired when a pause ends.                        |
-| `onComplete`       | `EventCallback`                    | Callback fired when all actions are complete.            |
+| Prop               | Type                             | Description                                             |
+| ------------------ | -------------------------------- | ------------------------------------------------------- |
+| `onInit`           | `(typecraft: Typecraft) => void` | Callback function that receives the Typecraft instance. |
+| `options`          | `Partial<TypecraftOptions>`      | Configuration options for the Typecraft.                |
+| `onTypeStart`      | `EventCallback`                  | Callback fired when typing starts.                      |
+| `onTypeChar`       | `EventCallback`                  | Callback fired when a character is typed.               |
+| `onTypeComplete`   | `EventCallback`                  | Callback fired when typing is complete.                 |
+| `onDeleteStart`    | `EventCallback`                  | Callback fired when deletion starts.                    |
+| `onDeleteChar`     | `EventCallback`                  | Callback fired when a character is deleted.             |
+| `onDeleteComplete` | `EventCallback`                  | Callback fired when deletion is complete.               |
+| `onPauseStart`     | `EventCallback`                  | Callback fired when a pause starts.                     |
+| `onPauseEnd`       | `EventCallback`                  | Callback fired when a pause ends.                       |
+| `onComplete`       | `EventCallback`                  | Callback fired when all actions are complete.           |
 
-### Typewriter Methods
+### Typecraft Methods
 
 | Method                     | Description                                      |
 | -------------------------- | ------------------------------------------------ |
@@ -158,12 +166,12 @@ If you're not using React, you can still use Text Typewriter with vanilla JavaSc
 | `deleteChars(number)`      | Deletes the specified number of characters.      |
 | `deleteAll()`              | Deletes all characters.                          |
 | `pauseFor(ms)`             | Pauses for the specified number of milliseconds. |
-| `start()`                  | Starts the typewriter effect.                    |
-| `stop()`                   | Stops the typewriter effect.                     |
+| `start()`                  | Starts the typecraft effect.                     |
+| `stop()`                   | Stops the typecraft effect.                      |
 | `changeCursorStyle(style)` | Changes the cursor style.                        |
 | `changeTextEffect(effect)` | Changes the text effect.                         |
 
-### TypewriterOptions
+### TypecraftOptions
 
 | Option        | Type                     | Default                          | Description                                     |
 | ------------- | ------------------------ | -------------------------------- | ----------------------------------------------- |
@@ -187,8 +195,8 @@ To set up the project for development:
 
 ## License
 
-Text Typewriter is open-source software licensed under the MIT license. See the [LICENSE](LICENSE) file for more details.
+TypecraftFX is open-source software licensed under the MIT license. See the [LICENSE](LICENSE) file for more details.
 
 ## Support
 
-If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/yourusername/text-typewriter/issues).ibraries.
+If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/yourusername/text-typecraft/issues).ibraries.

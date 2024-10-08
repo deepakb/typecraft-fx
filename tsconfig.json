@@ -16,6 +16,6 @@
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "stories/Typewriter.stories.tsx"],
+  "include": ["src", "stories", "tests"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

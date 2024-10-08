@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { QueueManager } from './../../core/QueueManager';
-import { QueueActionType, QueueItem } from './../../core/types';
+import { QueueManager } from '../../src/core/QueueManager';
+import { QueueActionType, QueueItem } from '../../src/core/types';
 
 describe('QueueManager', () => {
   let queueManager: QueueManager;
@@ -10,9 +10,10 @@ describe('QueueManager', () => {
   });
 
   it('should add items to the queue', () => {
+    const queueManager = new QueueManager();
     const item: QueueItem = {
       type: QueueActionType.TYPE,
-      payload: {},
+      payload: { char: 'a' },
       execute: vi.fn(),
     };
     queueManager.add(item);
@@ -21,15 +22,15 @@ describe('QueueManager', () => {
   });
 
   it('should start running when first item is added', async () => {
-    const runSpy = vi.spyOn(QueueManager.prototype as any, 'run');
+    const runSpy = vi.spyOn(queueManager as any, 'run');
     const item: QueueItem = {
       type: QueueActionType.TYPE,
-      payload: {},
-      execute: vi.fn(),
+      payload: 'test',
+      execute: async () => {},
     };
     queueManager.add(item);
     expect(runSpy).toHaveBeenCalledTimes(1);
-    await runSpy.mock.results[0].value; // Wait for the run method to complete
+    await runSpy.mock.results[0].value;
   });
 
   it('should not start running when item is added and already running', () => {

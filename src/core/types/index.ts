@@ -15,33 +15,34 @@ export interface SpeedOptions {
   delay: number;
 }
 
-export interface TypewriterClass {
+export interface TypecraftClass {
   // Core methods
-  start(): TypewriterClass;
-  stop(): TypewriterClass;
+  start(): TypecraftClass;
+  stop(): TypecraftClass;
 
   // Typing methods
-  typeString(string: string): TypewriterClass;
-  deleteAll(speed?: number): TypewriterClass;
-  deleteChars(amount: number): TypewriterClass;
-  pauseFor(ms: number): TypewriterClass;
-  changeDeleteSpeed(speed: number): TypewriterClass;
+  typeString(string: string): TypecraftClass;
+  deleteAll(speed?: number): TypecraftClass;
+  deleteChars(amount: number): TypecraftClass;
+  pauseFor(ms: number): TypecraftClass;
+  changeDeleteSpeed(speed: number): TypecraftClass;
 
   // Options methods
-  changeSettings(options: Partial<TypewriterOptions>): TypewriterClass;
+  changeSettings(options: Partial<TypecraftOptions>): TypecraftClass;
 
   // Event methods
-  on(event: TypewriterEvent, callback: EventCallback): TypewriterClass;
-  off(event: TypewriterEvent, callback: EventCallback): TypewriterClass;
+  on(event: TypecraftEvent, callback: EventCallback): TypecraftClass;
+  off(event: TypecraftEvent, callback: EventCallback): TypecraftClass;
 
   // Utility methods
-  callFunction(callback: () => void, thisArg?: any): TypewriterClass;
+  callFunction(callback: () => void, thisArg?: any): TypecraftClass;
 }
 
 export type EasingFunction = (t: number) => number;
 
-export interface TypewriterOptions {
+export interface TypecraftOptions {
   strings: string[];
+  speed: SpeedOptions | number;
   loop: boolean;
   autoStart: boolean;
   cursor: CursorOptions;
@@ -49,12 +50,13 @@ export interface TypewriterOptions {
   direction: Direction;
   cursorStyle: CursorStyle;
   textEffect: TextEffect;
-  speed: SpeedOptions | number;
-  html?: boolean;
-  easingFunction?: EasingFunction;
+  easingFunction: EasingFunction;
+  cursorCharacter: string;
+  cursorBlink: boolean;
+  html: boolean;
 }
 
-export interface TypewriterState {
+export interface TypecraftState {
   element: HTMLElement;
   queue: QueueItem[];
   visibleNodes: VisibleNode[];
@@ -62,8 +64,8 @@ export interface TypewriterState {
   pauseUntil: number | null;
   cursorNode: HTMLElement | null;
   currentSpeed: number | 'natural';
-  eventQueue: EventQueue;
-  eventListeners: Map<TypewriterEvent, EventCallback[]>;
+  eventQueue: (() => void)[];
+  eventListeners: Map<string, EventCallback[]>;
   cursorBlinkState: boolean;
   lastCursorBlinkTime: number;
   cursorPosition: number;
@@ -132,17 +134,18 @@ export enum TextEffect {
   FadeIn = 'fadeIn',
   SlideIn = 'slideIn',
   Glitch = 'glitch',
-  Typewriter = 'typewriter',
+  Typecraft = 'typecraft',
   Rainbow = 'rainbow',
 }
 
-export type TypewriterEvent =
+export type TypecraftEvent =
   | 'typeStart'
   | 'typeChar'
   | 'typeComplete'
   | 'deleteStart'
   | 'deleteChar'
   | 'deleteComplete'
+  | 'deleteSkipped'
   | 'pauseStart'
   | 'pauseEnd'
   | 'complete';

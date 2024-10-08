@@ -1,4 +1,4 @@
-import { VirtualDOM, VNode } from './../../core/VirtualDOM';
+import { VirtualDOM, VNode } from '../../src/core/VirtualDOM';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 describe('VirtualDOM', () => {
@@ -18,8 +18,7 @@ describe('VirtualDOM', () => {
   it('addNode adds a node to the virtual DOM', () => {
     const node: VNode = { type: 'text', content: 'Hello' };
     virtualDOM.addNode(node);
-    expect(virtualDOM['vdom'].length).toBe(1);
-    expect(virtualDOM['vdom'][0]).toEqual(node);
+    expect(virtualDOM.getHTML()).toBe('Hello');
   });
 
   it('removeLastNode removes the last node from the virtual DOM', () => {
@@ -28,16 +27,10 @@ describe('VirtualDOM', () => {
     virtualDOM.addNode(node1);
     virtualDOM.addNode(node2);
     virtualDOM.removeLastNode();
-    expect(virtualDOM['vdom'].length).toBe(1);
-    expect(virtualDOM['vdom'][0]).toEqual(node1);
+    expect(virtualDOM.getHTML()).toBe('Hello');
   });
 
-  it('clear removes all nodes from the virtual DOM', () => {
-    virtualDOM.addNode({ type: 'text', content: 'Hello' });
-    virtualDOM.addNode({ type: 'text', content: 'World' });
-    virtualDOM.clear();
-    expect(virtualDOM['vdom'].length).toBe(0);
-  });
+  // Remove the 'clear' test as this method no longer exists in our new implementation
 
   it('updateDOM renders text nodes correctly', () => {
     virtualDOM.addNode({ type: 'text', content: 'Hello' });
@@ -65,5 +58,18 @@ describe('VirtualDOM', () => {
     virtualDOM.addNode({ type: 'text', content: 'New content' });
     virtualDOM.updateDOM(mockElement);
     expect(mockElement.innerHTML).toBe('New content');
+  });
+
+  it('getHTML returns the correct HTML string', () => {
+    const node: VNode = {
+      type: 'element',
+      tag: 'div',
+      children: [
+        { type: 'text', content: 'Hello' },
+        { type: 'element', tag: 'span', children: [{ type: 'text', content: 'World' }] },
+      ],
+    };
+    virtualDOM.addNode(node);
+    expect(virtualDOM.getHTML()).toBe('<div>Hello<span>World</span></div>');
   });
 });

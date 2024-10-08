@@ -1,66 +1,72 @@
 import {
-  TypewriterOptions,
-  TypewriterState,
+  TypecraftOptions,
+  TypecraftState,
   QueueActionType,
   Direction,
   CursorStyle,
   TextEffect,
   NodeType,
-  TypewriterEvent,
+  TypecraftEvent,
   EventCallback,
   HTMLParseNode,
   CursorOptions,
-  SpeedOptions,
   EasingFunction,
 } from './types';
 import { VirtualDOM, VNode } from './VirtualDOM';
 
-export class Typewriter {
-  private options: TypewriterOptions;
-  private state: TypewriterState;
+export class TypecraftEngine {
+  private options: TypecraftOptions;
+  private state: TypecraftState;
   private vdom: VirtualDOM;
   private rafId: number | null = null;
 
-  constructor(element: string | HTMLElement, options: Partial<TypewriterOptions> = {}) {
-    const defaultSpeed: SpeedOptions = {
-      type: 50,
-      delete: 50,
-      delay: 1500,
-    };
+  constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
+    this.validateElement(element);
+    this.options = this.mergeOptions(options);
+    this.state = this.initializeState(element);
+    this.vdom = new VirtualDOM();
+    this.init();
+  }
 
-    const defaultOptions: TypewriterOptions = {
+  private validateElement(element: string | HTMLElement): void {
+    if (typeof element === 'string') {
+      const el = document.querySelector(element);
+      if (!el) {
+        throw new Error(`Element with selector "${element}" not found`);
+      }
+    } else if (!(element instanceof HTMLElement)) {
+      throw new Error('Invalid HTML element provided');
+    }
+  }
+
+  private mergeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
+    const defaultOptions: TypecraftOptions = {
       strings: [],
-      speed: defaultSpeed,
+      speed: { type: 50, delete: 50, delay: 1500 },
       loop: false,
       autoStart: false,
       cursor: {
         text: '|',
         color: 'black',
         blinkSpeed: 500,
-        opacity: {
-          min: 0,
-          max: 1,
-        },
+        opacity: { min: 0, max: 1 },
         cursorStyle: CursorStyle.Blink,
       },
       pauseFor: 1500,
       direction: Direction.LTR,
       cursorStyle: CursorStyle.Blink,
       textEffect: TextEffect.None,
-      easingFunction: options.easingFunction || this.defaultEasing,
+      easingFunction: (t: number) => t,
+      cursorCharacter: '|',
+      cursorBlink: true,
+      html: false,
     };
 
-    this.options = { ...defaultOptions, ...options } as TypewriterOptions;
+    return { ...defaultOptions, ...options };
+  }
 
-    if (typeof this.options.speed === 'number') {
-      this.options.speed = {
-        type: this.options.speed,
-        delete: this.options.speed,
-        delay: defaultSpeed.delay,
-      };
-    }
-
-    this.state = {
+  private initializeState(element: string | HTMLElement): TypecraftState {
+    return {
       element: typeof element === 'string' ? document.querySelector(element)! : element,
       queue: [],
       visibleNodes: [],
@@ -74,13 +80,6 @@ export class Typewriter {
       lastCursorBlinkTime: 0,
       cursorPosition: 0,
     };
-
-    if (!this.state.element) {
-      throw new Error('Invalid HTML element provided');
-    }
-
-    this.vdom = new VirtualDOM();
-    this.init();
   }
 
   private init(): void {
@@ -91,6 +90,20 @@ export class Typewriter {
       this.typeOutAllStrings();
     }
   }
+
+  // private initializeCursor(): void {
+  //   if (this.state.cursorNode) {
+  //     this.state.cursorNode.remove();
+  //   }
+  //   const cursorElement = document.createElement('span');
+  //   cursorElement.className = 'typecraft-cursor';
+  //   cursorElement.textContent = this.options.cursor.text;
+  //   if (this.options.cursorBlink) {
+  //     cursorElement.classList.add('typecraft-cursor-blink');
+  //   }
+  //   this.state.element.appendChild(cursorElement);
+  //   this.state.cursorNode = cursorElement;
+  // }
 
   private defaultEasing: EasingFunction = (t: number) => t;
 
@@ -115,7 +128,7 @@ export class Typewriter {
 
     this.state.cursorNode = document.createElement('span');
     this.state.cursorNode.textContent = this.options.cursor.text;
-    this.state.cursorNode.className = `typewriter-cursor typewriter-cursor-${this.options.cursorStyle}`;
+    this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.cursorStyle}`;
     this.state.cursorNode.style.color = this.options.cursor.color;
 
     this.state.element.appendChild(this.state.cursorNode);
@@ -212,7 +225,7 @@ export class Typewriter {
   public changeCursorStyle(style: CursorStyle): this {
     this.options.cursorStyle = style;
     if (this.state.cursorNode) {
-      this.state.cursorNode.className = `typewriter-cursor typewriter-cursor-${style}`;
+      this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${style}`;
     }
     return this;
   }
@@ -234,7 +247,7 @@ export class Typewriter {
     this.state.queue = [];
   }
 
-  public on(eventName: TypewriterEvent, callback: EventCallback): this {
+  public on(eventName: TypecraftEvent, callback: EventCallback): this {
     if (!this.state.eventListeners.has(eventName)) {
       this.state.eventListeners.set(eventName, []);
     }
@@ -242,7 +255,7 @@ export class Typewriter {
     return this;
   }
 
-  public off(eventName: TypewriterEvent, callback: EventCallback): this {
+  public off(eventName: TypecraftEvent, callback: EventCallback): this {
     const listeners = this.state.eventListeners.get(eventName);
     if (listeners) {
       const index = listeners.indexOf(callback);
@@ -274,7 +287,7 @@ export class Typewriter {
     return this;
   }
 
-  private emit(eventName: TypewriterEvent, ...args: any[]): void {
+  private emit(eventName: TypecraftEvent, ...args: any[]): void {
     const listeners = this.state.eventListeners.get(eventName);
     if (listeners) {
       listeners.forEach((callback) => callback(...args));
@@ -290,21 +303,42 @@ export class Typewriter {
       const { type, payload } = this.state.queue.shift()!;
 
       switch (type) {
+        case QueueActionType.TYPE:
         case QueueActionType.TYPE_CHARACTER:
           await this.typeCharacter(payload);
           break;
+        case QueueActionType.DELETE:
         case QueueActionType.DELETE_CHARACTER:
-          await this.deleteCharacter();
+          if (this.state.visibleNodes.length > 0) {
+            await this.deleteCharacter();
+          } else {
+            this.emit('deleteSkipped');
+          }
           break;
         case QueueActionType.PAUSE:
           await this.wait(payload.ms);
           break;
+        case QueueActionType.CALLBACK:
         case QueueActionType.CALL_FUNCTION:
-          payload.callback();
+          await Promise.resolve(payload.callback());
           break;
         case QueueActionType.LOOP:
           this.typeOutAllStrings();
           break;
+        case QueueActionType.CHANGE_DIRECTION:
+          this.setDirection(payload.direction);
+          break;
+        case QueueActionType.CHANGE_CURSOR:
+          this.changeCursor(payload.cursor);
+          break;
+        case QueueActionType.CHANGE_CURSOR_STYLE:
+          this.changeCursorStyle(payload.cursorStyle);
+          break;
+        case QueueActionType.CHANGE_TEXT_EFFECT:
+          this.changeTextEffect(payload.textEffect);
+          break;
+        default:
+          console.warn(`Unknown queue action type: ${type}`);
       }
 
       requestAnimationFrame(() => this.runQueue());
@@ -457,12 +491,17 @@ export class Typewriter {
       char: this.state.visibleNodes[this.state.visibleNodes.length - 1]?.node.textContent,
     });
 
-    this.vdom.removeLastNode();
-    this.vdom.updateDOM(this.state.element);
-    this.state.visibleNodes.pop();
-    this.state.cursorPosition--;
+    if (this.state.visibleNodes.length > 0) {
+      this.vdom.removeLastNode();
+      this.vdom.updateDOM(this.state.element);
+      this.state.visibleNodes.pop();
+      this.state.cursorPosition--;
 
-    await this.wait(this.getDeleteSpeed());
+      await this.wait(this.getDeleteSpeed());
+    } else {
+      // If there are no more visible nodes, we should stop deleting
+      this.emit('deleteComplete');
+    }
   }
 
   private getTypeSpeed(): number {
@@ -493,7 +532,7 @@ export class Typewriter {
     if (!this.state.cursorNode) return;
 
     const now = Date.now();
-    const delta = now - this.state.lastCursorBlinkTime;
+    const delta = now - (this.state.lastCursorBlinkTime || 0);
 
     if (delta >= this.options.cursor.blinkSpeed) {
       this.state.cursorBlinkState = !this.state.cursorBlinkState;
@@ -503,7 +542,9 @@ export class Typewriter {
       this.state.lastCursorBlinkTime = now;
     }
 
-    this.rafId = requestAnimationFrame(() => this.animateCursor());
+    if (this.options.cursorBlink) {
+      this.rafId = requestAnimationFrame(() => this.animateCursor());
+    }
   }
 
   private async applyTextEffect(effect: TextEffect): Promise<void> {
@@ -559,7 +600,7 @@ export class Typewriter {
         await this.wait(nodes.length * 50 + 200);
         break;
 
-      case TextEffect.Typewriter:
+      case TextEffect.Typecraft:
         nodes.forEach((node, index) => {
           const element = node.node as HTMLElement;
           element.style.visibility = 'hidden';

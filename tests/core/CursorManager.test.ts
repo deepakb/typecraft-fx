@@ -1,5 +1,5 @@
-import { CursorManager } from './../../core/CursorManager';
-import { CursorOptions, CursorStyle } from './../../core/types';
+import { CursorManager } from '../../src/core/CursorManager';
+import { CursorOptions, CursorStyle } from '../../src/core/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('CursorManager', () => {
@@ -65,7 +65,7 @@ describe('CursorManager', () => {
     cursorManager.changeCursorStyle(CursorStyle.Blink);
 
     expect((parentElement.firstChild as Element).className).toBe(
-      'typewriter-cursor typewriter-cursor-blink'
+      'typecraft-cursor typecraft-cursor-blink'
     );
     expect(stopBlinkingSpy).toHaveBeenCalledTimes(1);
     expect(startBlinkingSpy).toHaveBeenCalledTimes(1);

@@ -1,14 +1,14 @@
 {
-  "name": "text-typewriter",
+  "name": "typecraft-fx",
   "version": "1.0.0",
   "type": "module",
-  "main": "./dist/text-typewriter.umd.js",
-  "module": "./dist/text-typewriter.es.js",
+  "main": "./dist/typecraft-fx.umd.js",
+  "module": "./dist/typecraft-fx.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/text-typewriter.es.js",
-      "require": "./dist/text-typewriter.umd.js"
+      "import": "./dist/typecraft-fx.es.js",
+      "require": "./dist/typecraft-fx.umd.js"
     }
   },
   "sideEffects": false,
@@ -29,7 +29,9 @@
   "license": "MIT",
   "devDependencies": {
     "@storybook/addon-essentials": "^8.3.5",
+    "@storybook/addon-interactions": "^8.3.5",
     "@storybook/addon-links": "^8.3.5",
+    "@storybook/addon-onboarding": "^8.3.5",
     "@storybook/builder-vite": "^8.3.5",
     "@storybook/react": "^8.3.5",
     "@storybook/react-vite": "^8.3.5",

@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Typewriter Test</title>
-    <script src="./dist/text-typewriter-js.umd.js"></script>
+    <title>Typecraft Test</title>
+    <script src="./dist/text-typecraft-js.umd.js"></script>
     <style>
-      #typewriter {
+      #typecraft {
         font-size: 24px;
         font-family: monospace;
         margin: 20px;
@@ -14,12 +14,12 @@
     </style>
   </head>
   <body>
-    <div id="typewriter"></div>
+    <div id="typecraft"></div>
 
     <script>
       document.addEventListener('DOMContentLoaded', function () {
-        const element = document.getElementById('typewriter');
-        const typewriter = new Typewriter(element, {
+        const element = document.getElementById('typecraft');
+        const typecraft = new Typecraft(element, {
           strings: ['Hello, World!', 'This is a test.', 'Looping...'],
           loop: true,
           autoStart: true,

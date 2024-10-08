@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TextEffectManager } from './../../core/TextEffects';
-import { TextEffect } from './../../core/types';
+import { TextEffectManager } from '../../src/core/TextEffects';
+import { TextEffect } from '../../src/core/types';
 
 describe('TextEffectManager', () => {
   let textEffectManager: TextEffectManager;

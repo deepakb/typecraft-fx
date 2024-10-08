@@ -14,7 +14,7 @@ export class CursorManager {
 
   private createCursorElement(): HTMLElement {
     const cursor = document.createElement('span');
-    cursor.className = `typewriter-cursor typewriter-cursor-${this.options.cursorStyle}`;
+    cursor.className = `typecraft-cursor typecraft-cursor-${this.options.cursorStyle}`;
     cursor.textContent = this.options.text;
     cursor.style.color = this.options.color;
     return cursor;
@@ -37,7 +37,7 @@ export class CursorManager {
 
   public changeCursorStyle(style: CursorStyle): void {
     this.options.cursorStyle = style;
-    this.cursorNode.className = `typewriter-cursor typewriter-cursor-${style}`;
+    this.cursorNode.className = `typecraft-cursor typecraft-cursor-${style}`;
     this.stopBlinking();
     this.startBlinking();
   }
