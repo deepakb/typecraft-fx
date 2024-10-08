@@ -25,13 +25,13 @@ TypecraftFX is a feature-rich library that brings dynamic typing animations to y
 You can install TypecraftFX using npm:
 
 ```bash
-npm install text-typecraft
+npm install typecraft-fx
 ```
 
 For those who prefer to use a CDN, you can include the following script tag in your HTML file:
 
 ```html
-<script src="https://unpkg.com/text-typecraft/dist/text-typecraft.min.js"></script>
+<script src="https://unpkg.com/typecraft-fx/dist/typecraft-fx.min.js"></script>
 ```
 
 Note: Replace `@latest` with a specific version number if you want to use a particular version of the library.
@@ -43,18 +43,18 @@ Note: Replace `@latest` with a specific version number if you want to use a part
 ### Eager Loading (smaller bundle, no code splitting)
 
 ```jsx
-import { Typecraft } from 'text-typecraft';
+import { Typecraft } from 'typecraft-fx';
 ```
 
 ### Lazy Loading (larger initial bundle, but with code splitting)
 
 ```jsx
-import { TypecraftComponent } from 'text-typecraft';
+import { TypecraftComponent } from 'typecraft-fx';
 ```
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent } from 'text-typecraft';
+import { TypecraftComponent } from 'typecraft-fx';
 
 const MyComponent = () => {
   return (
@@ -78,7 +78,7 @@ export default MyComponent;
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent, TextEffect, CursorStyle } from 'text-typecraft';
+import { TypecraftComponent, TextEffect, CursorStyle } from 'typecraft-fx';
 
 const AdvancedComponent = () => {
   return (
@@ -118,7 +118,7 @@ If you're not using React, you can still use TypecraftFX with vanilla JavaScript
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TypecraftFX Demo</title>
-    <script src="https://unpkg.com/text-typecraft@latest/dist/text-typecraft.umd.js"></script>
+    <script src="https://unpkg.com/typecraft-fx@latest/dist/typecraft-fx.umd.js"></script>
   </head>
   <body>
     <div id="typecraft"></div>
@@ -203,4 +203,4 @@ TypecraftFX is open-source software licensed under the MIT license. See the [LIC
 
 ## Support
 
-If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/yourusername/text-typecraft/issues).ibraries.
+If you encounter any issues or have questions, please file an issue on the [GitHub issue tracker](https://github.com/yourusername/typecraft-fx/issues).ibraries.
