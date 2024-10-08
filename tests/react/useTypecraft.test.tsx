@@ -19,7 +19,21 @@ describe('useTypecraft', () => {
 
   it('should initialize TypecraftEngine when element is set', () => {
     render(<TestComponent />);
-    expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), undefined);
+    expect(TypecraftEngine).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      expect.objectContaining({
+        autoStart: false,
+        cursor: expect.any(Object),
+        direction: 'ltr',
+        easingFunction: expect.any(Function),
+        html: false,
+        loop: false,
+        pauseFor: expect.any(Number),
+        speed: expect.any(Number),
+        strings: expect.any(Array),
+        textEffect: 'none',
+      })
+    );
   });
 
   it('should call onInit with TypecraftEngine instance', () => {

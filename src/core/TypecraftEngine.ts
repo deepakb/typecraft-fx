@@ -9,22 +9,18 @@ import {
   TypecraftEvent,
   EventCallback,
   HTMLParseNode,
-  CursorOptions,
   EasingFunction,
 } from './types';
-import { VirtualDOM, VNode } from './VirtualDOM';
 
 export class TypecraftEngine {
   private options: TypecraftOptions;
   private state: TypecraftState;
-  private vdom: VirtualDOM;
   private rafId: number | null = null;
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
     this.validateElement(element);
     this.options = this.mergeOptions(options);
     this.state = this.initializeState(element);
-    this.vdom = new VirtualDOM();
     this.init();
   }
 
@@ -42,7 +38,8 @@ export class TypecraftEngine {
   private mergeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
     const defaultOptions: TypecraftOptions = {
       strings: [],
-      speed: { type: 50, delete: 50, delay: 1500 },
+      speed: 50,
+      pauseFor: 1500,
       loop: false,
       autoStart: false,
       cursor: {
@@ -50,19 +47,23 @@ export class TypecraftEngine {
         color: 'black',
         blinkSpeed: 500,
         opacity: { min: 0, max: 1 },
-        cursorStyle: CursorStyle.Blink,
+        style: CursorStyle.Solid,
+        blink: false,
       },
-      pauseFor: 1500,
       direction: Direction.LTR,
-      cursorStyle: CursorStyle.Blink,
       textEffect: TextEffect.None,
-      easingFunction: (t: number) => t,
-      cursorCharacter: '|',
-      cursorBlink: true,
+      easingFunction: (t) => t,
       html: false,
     };
 
-    return { ...defaultOptions, ...options };
+    return {
+      ...defaultOptions,
+      ...options,
+      cursor: {
+        ...defaultOptions.cursor,
+        ...options.cursor,
+      },
+    };
   }
 
   private initializeState(element: string | HTMLElement): TypecraftState {
@@ -79,6 +80,7 @@ export class TypecraftEngine {
       cursorBlinkState: true,
       lastCursorBlinkTime: 0,
       cursorPosition: 0,
+      lastOperation: null,
     };
   }
 
@@ -119,23 +121,6 @@ export class TypecraftEngine {
   public changeEasingFunction(easing: EasingFunction): this {
     this.options.easingFunction = easing;
     return this;
-  }
-
-  private setupCursor(): void {
-    if (this.state.cursorNode) {
-      this.state.cursorNode.remove();
-    }
-
-    this.state.cursorNode = document.createElement('span');
-    this.state.cursorNode.textContent = this.options.cursor.text;
-    this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.cursorStyle}`;
-    this.state.cursorNode.style.color = this.options.cursor.color;
-
-    this.state.element.appendChild(this.state.cursorNode);
-
-    if (this.options.cursorStyle === CursorStyle.Blink) {
-      this.animateCursor();
-    }
   }
 
   public setDirection(direction: Direction): this {
@@ -189,9 +174,10 @@ export class TypecraftEngine {
     return this;
   }
 
-  public typeString(string: string, effect?: TextEffect): this {
-    const htmlParseNodes = this.parseHTML(string);
-    this.addNodesToQueue(htmlParseNodes, effect);
+  public typeString(string: string): this {
+    string.split('').forEach((char) => {
+      this.addToQueue(QueueActionType.TYPE_CHARACTER, { char });
+    });
     return this;
   }
 
@@ -211,19 +197,34 @@ export class TypecraftEngine {
     return this;
   }
 
-  public setCursor(options: Partial<CursorOptions>): this {
-    this.options.cursor = { ...this.options.cursor, ...options };
+  private setupCursor(): void {
     if (this.state.cursorNode) {
-      Object.assign(this.state.cursorNode.style, {
-        color: this.options.cursor.color,
-      });
-      this.state.cursorNode.textContent = this.options.cursor.text;
+      this.state.cursorNode.remove();
     }
-    return this;
+
+    this.state.cursorNode = document.createElement('span');
+    this.state.cursorNode.textContent = this.options.cursor.text;
+    this.updateCursorStyle();
+
+    this.state.element.appendChild(this.state.cursorNode);
+
+    console.log('Cursor setup complete. Cursor node:', this.state.cursorNode);
+    console.log('Cursor class:', this.state.cursorNode.className);
+
+    if (this.options.cursor.blink) {
+      this.animateCursor();
+    }
+  }
+
+  private updateCursorStyle(): void {
+    if (this.state.cursorNode) {
+      this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.cursor.style}`;
+      this.state.cursorNode.style.color = this.options.cursor.color;
+    }
   }
 
   public changeCursorStyle(style: CursorStyle): this {
-    this.options.cursorStyle = style;
+    this.options.cursor.style = style;
     if (this.state.cursorNode) {
       this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${style}`;
     }
@@ -235,9 +236,29 @@ export class TypecraftEngine {
     return this;
   }
 
-  public start(): this {
-    this.runQueue();
-    return this;
+  private updateCursorPosition(): void {
+    if (this.state.cursorNode) {
+      this.state.element.removeChild(this.state.cursorNode);
+    }
+    const cursorSpan = document.createElement('span');
+    cursorSpan.textContent = this.options.cursor.text;
+    cursorSpan.className = 'typecraft-cursor';
+    this.state.cursorNode = cursorSpan;
+    this.state.element.appendChild(this.state.cursorNode);
+  }
+
+  public start(): Promise<void> {
+    this.setupCursor();
+    this.updateCursorPosition();
+    this.updateCursorStyle();
+    if (this.options.strings.length && !this.state.queue.length) {
+      this.typeOutAllStrings();
+    }
+    return new Promise((resolve) => {
+      this.runQueue().then(() => {
+        resolve();
+      });
+    });
   }
 
   public stop(): void {
@@ -273,10 +294,13 @@ export class TypecraftEngine {
 
   public typeOutAllStrings(): this {
     this.options.strings.forEach((string, index) => {
+      // Type the string
       this.typeString(string);
 
+      // If it's not the last string, add pause and delete actions
       if (index !== this.options.strings.length - 1) {
-        this.pauseFor(this.options.pauseFor).deleteAll();
+        this.pauseFor(this.options.pauseFor);
+        this.deleteAll();
       }
     });
 
@@ -299,50 +323,60 @@ export class TypecraftEngine {
   }
 
   private async runQueue(): Promise<void> {
-    if (this.state.queue.length > 0) {
-      const { type, payload } = this.state.queue.shift()!;
+    const queueItem = this.state.queue.shift();
+    if (!queueItem) {
+      this.checkOperationComplete();
+      return;
+    }
 
-      switch (type) {
-        case QueueActionType.TYPE:
-        case QueueActionType.TYPE_CHARACTER:
-          await this.typeCharacter(payload);
-          break;
-        case QueueActionType.DELETE:
-        case QueueActionType.DELETE_CHARACTER:
-          if (this.state.visibleNodes.length > 0) {
-            await this.deleteCharacter();
-          } else {
-            this.emit('deleteSkipped');
-          }
-          break;
-        case QueueActionType.PAUSE:
-          await this.wait(payload.ms);
-          break;
-        case QueueActionType.CALLBACK:
-        case QueueActionType.CALL_FUNCTION:
-          await Promise.resolve(payload.callback());
-          break;
-        case QueueActionType.LOOP:
-          this.typeOutAllStrings();
-          break;
-        case QueueActionType.CHANGE_DIRECTION:
-          this.setDirection(payload.direction);
-          break;
-        case QueueActionType.CHANGE_CURSOR:
-          this.changeCursor(payload.cursor);
-          break;
-        case QueueActionType.CHANGE_CURSOR_STYLE:
-          this.changeCursorStyle(payload.cursorStyle);
-          break;
-        case QueueActionType.CHANGE_TEXT_EFFECT:
-          this.changeTextEffect(payload.textEffect);
-          break;
-        default:
-          console.warn(`Unknown queue action type: ${type}`);
+    const { type, payload } = queueItem;
+    this.state.lastOperation = type;
+
+    switch (type) {
+      case QueueActionType.TYPE:
+      case QueueActionType.TYPE_CHARACTER:
+        await this.typeCharacter(payload);
+        break;
+      case QueueActionType.DELETE:
+      case QueueActionType.DELETE_CHARACTER:
+        if (this.state.visibleNodes.length > 0) {
+          await this.deleteCharacter();
+        } else {
+          this.emit('deleteSkipped');
+        }
+        break;
+      case QueueActionType.PAUSE:
+        await this.wait(payload.ms);
+        break;
+      case QueueActionType.CALLBACK:
+      case QueueActionType.CALL_FUNCTION:
+        await Promise.resolve(payload.callback());
+        break;
+      case QueueActionType.LOOP:
+        this.typeOutAllStrings();
+        break;
+      default:
+        console.warn(`Unknown queue action type: ${type}`);
+    }
+
+    // Continue processing the queue
+    await this.runQueue();
+  }
+
+  private checkOperationComplete(): void {
+    if (this.state.queue.length === 0) {
+      if (this.state.lastOperation === QueueActionType.TYPE_CHARACTER) {
+        this.emit('typeComplete');
+      } else if (this.state.lastOperation === QueueActionType.DELETE_CHARACTER) {
+        this.emit('deleteComplete');
       }
+      this.emit('complete');
+    }
+  }
 
-      requestAnimationFrame(() => this.runQueue());
-    } else {
+  private checkTypingComplete(): void {
+    if (this.state.queue.length === 0) {
+      this.emit('typeComplete');
       this.emit('complete');
     }
   }
@@ -407,100 +441,39 @@ export class TypecraftEngine {
     }
   }
 
-  private async typeCharacter(payload: {
-    char?: string;
-    htmlParseNode: HTMLParseNode;
-  }): Promise<void> {
-    this.emit('typeChar', payload);
-
-    let node: VNode;
-    if (payload.char) {
-      node = { type: 'text', content: payload.char };
-    } else {
-      node = {
-        type: 'element',
-        tag: payload.htmlParseNode.tagName!,
-        attributes: payload.htmlParseNode.attributes || {},
-        children: [],
-      };
-    }
-
-    this.vdom.addNode(node);
-    this.vdom.updateDOM(this.state.element);
-
-    if (payload.htmlParseNode.type === 'element') {
-      if (!payload.htmlParseNode.isClosing) {
-        const element = document.createElement(payload.htmlParseNode.tagName!);
-        Object.entries(payload.htmlParseNode.attributes || {}).forEach(([key, value]) => {
-          element.setAttribute(key, value);
-        });
-        this.state.visibleNodes.push({
-          type: NodeType.HTMLTag,
-          node: element,
-          htmlParseNode: payload.htmlParseNode,
-        });
-      } else {
-        const openingTagIndex = this.state.visibleNodes.findIndex(
-          (vn) =>
-            vn.type === NodeType.HTMLTag &&
-            vn.htmlParseNode?.tagName === payload.htmlParseNode.tagName &&
-            !vn.htmlParseNode?.isClosing
-        );
-        if (openingTagIndex !== -1) {
-          const childNodes = this.state.visibleNodes.slice(openingTagIndex + 1);
-          childNodes.forEach((childNode) => {
-            if (childNode.type === NodeType.Character) {
-              (this.state.visibleNodes[openingTagIndex].node as HTMLElement).appendChild(
-                childNode.node
-              );
-            }
-          });
-          this.state.visibleNodes.splice(openingTagIndex + 1, childNodes.length);
-        }
-      }
-    } else {
-      this.state.visibleNodes.push({
-        type: NodeType.Character,
-        node: document.createTextNode(payload.char!),
-        htmlParseNode: payload.htmlParseNode,
-      });
-    }
-
-    this.state.cursorPosition++;
-
-    if (payload.char) {
-      await this.wait(this.getTypeSpeed());
-    }
-
-    this.updateCursorPosition();
-  }
-
-  private updateCursorPosition(): void {
+  private async typeCharacter(payload: { char: string }): Promise<void> {
+    const { char } = payload;
+    const charSpan = document.createElement('span');
+    charSpan.textContent = char;
     if (this.state.cursorNode) {
-      const lastNode = this.state.visibleNodes[this.state.visibleNodes.length - 1];
-      if (lastNode && lastNode.node instanceof HTMLElement) {
-        const rect = lastNode.node.getBoundingClientRect();
-        this.state.cursorNode.style.left = `${rect.right}px`;
-        this.state.cursorNode.style.top = `${rect.top}px`;
-      }
+      this.state.element.insertBefore(charSpan, this.state.cursorNode);
+    } else {
+      this.state.element.appendChild(charSpan);
+      this.setupCursor();
     }
+    this.state.visibleNodes.push({ type: NodeType.Character, node: charSpan });
+    this.updateCursorPosition();
+    this.updateCursorStyle();
+    this.applyTextEffect(this.options.textEffect);
+    await this.wait(
+      typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type
+    );
+    this.emit('typeChar', { char });
   }
 
   private async deleteCharacter(): Promise<void> {
-    this.emit('deleteChar', {
-      char: this.state.visibleNodes[this.state.visibleNodes.length - 1]?.node.textContent,
-    });
-
     if (this.state.visibleNodes.length > 0) {
-      this.vdom.removeLastNode();
-      this.vdom.updateDOM(this.state.element);
-      this.state.visibleNodes.pop();
-      this.state.cursorPosition--;
-
-      await this.wait(this.getDeleteSpeed());
-    } else {
-      // If there are no more visible nodes, we should stop deleting
-      this.emit('deleteComplete');
+      const lastNode = this.state.visibleNodes.pop();
+      if (lastNode && lastNode.node.parentNode) {
+        lastNode.node.parentNode.removeChild(lastNode.node);
+      }
+      this.updateCursorPosition();
+      const deleteSpeed =
+        typeof this.options.speed === 'number'
+          ? this.options.speed
+          : this.options.speed.delete || 50;
+      await this.wait(deleteSpeed);
+      this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
     }
   }
 
@@ -514,17 +487,6 @@ export class TypecraftEngine {
       return Math.random() * (150 - 50) + 50;
     } else {
       return 50; // Default value if speed is neither a number nor 'natural'
-    }
-  }
-
-  private getDeleteSpeed(): number {
-    const speed =
-      typeof this.options.speed === 'object' ? this.options.speed.delete : this.options.speed;
-    if (typeof speed === 'number') {
-      const easing = this.getEasing();
-      return speed === -1 ? Math.random() * (100 - 30) + 30 : easing(speed);
-    } else {
-      return 50; // Default to 50 if speed is not a number
     }
   }
 
@@ -542,112 +504,108 @@ export class TypecraftEngine {
       this.state.lastCursorBlinkTime = now;
     }
 
-    if (this.options.cursorBlink) {
+    if (this.options.cursor.blink) {
       this.rafId = requestAnimationFrame(() => this.animateCursor());
     }
   }
 
   private async applyTextEffect(effect: TextEffect): Promise<void> {
-    const nodes = this.state.visibleNodes.filter((node) => node.type === NodeType.Character);
-
-    switch (effect) {
-      case TextEffect.FadeIn:
-        nodes.forEach((node, index) => {
-          const element = node.node as HTMLElement;
-          element.style.opacity = '0';
-          element.style.transition = 'opacity 0.1s ease-in-out';
-
-          setTimeout(() => {
-            element.style.opacity = '1';
-          }, index * 20);
-        });
-        await this.wait(nodes.length * 20 + 200);
-        break;
-
-      case TextEffect.SlideIn:
-        nodes.forEach((node, index) => {
-          const element = node.node as HTMLElement;
-          element.style.transform = 'translateY(20px)';
-          element.style.opacity = '0';
-          element.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-
-          setTimeout(() => {
-            element.style.transform = 'translateY(0)';
-            element.style.opacity = '1';
-          }, index * 20);
-        });
-        await this.wait(nodes.length * 20 + 200);
-        break;
-
-      case TextEffect.Glitch:
-        const glitchChars = '!@#$%^&*()_+-={}[]|;:,.<>?';
-        nodes.forEach((node, index) => {
-          const textNode = node.node as Text;
-          const originalChar = textNode.textContent || '';
-          let glitchInterval: number;
-
-          setTimeout(() => {
-            glitchInterval = window.setInterval(() => {
-              textNode.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
-            }, 50);
-
+    const applyEffectToNode = (node: HTMLElement, index: number): Promise<void> => {
+      return new Promise((resolve) => {
+        switch (effect) {
+          case TextEffect.FadeIn:
+            node.style.opacity = '0';
+            node.style.transition = 'opacity 0.1s ease-in-out';
             setTimeout(() => {
-              clearInterval(glitchInterval);
-              textNode.textContent = originalChar;
-            }, 200);
-          }, index * 50);
-        });
-        await this.wait(nodes.length * 50 + 200);
-        break;
+              node.style.opacity = '1';
+              setTimeout(resolve, 100); // Wait for transition to complete
+            }, index * 20);
+            break;
+          case TextEffect.SlideIn:
+            node.style.transform = 'translateY(20px)';
+            node.style.opacity = '0';
+            node.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
+            setTimeout(() => {
+              node.style.transform = 'translateY(0)';
+              node.style.opacity = '1';
+              setTimeout(resolve, 200); // Wait for transition to complete
+            }, index * 20);
+            break;
+          case TextEffect.Glitch:
+            const glitchChars = '!@#$%^&*()_+-={}[]|;:,.<>?';
+            const originalChar = node.textContent || '';
+            let glitchInterval: number;
+            setTimeout(() => {
+              glitchInterval = window.setInterval(() => {
+                node.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
+              }, 50);
+              setTimeout(() => {
+                clearInterval(glitchInterval);
+                node.textContent = originalChar;
+                resolve();
+              }, 200);
+            }, index * 50);
+            break;
+          case TextEffect.Typecraft:
+            node.style.visibility = 'hidden';
+            setTimeout(() => {
+              node.style.visibility = 'visible';
+              resolve();
+            }, index * this.getTypeSpeed());
+            break;
+          case TextEffect.Rainbow:
+            const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
+            node.style.color = colors[index % colors.length];
+            node.style.opacity = '0';
+            node.style.transition = 'opacity 0.1s ease-in-out';
+            setTimeout(() => {
+              node.style.opacity = '1';
+              setTimeout(resolve, 100); // Wait for transition to complete
+            }, index * 20);
+            break;
+          case TextEffect.None:
+          default:
+            resolve();
+            break;
+        }
+      });
+    };
 
-      case TextEffect.Typecraft:
-        nodes.forEach((node, index) => {
-          const element = node.node as HTMLElement;
-          element.style.visibility = 'hidden';
+    const effectPromises: Promise<void>[] = [];
 
-          setTimeout(() => {
-            element.style.visibility = 'visible';
-          }, index * this.getTypeSpeed());
-        });
-        await this.wait(nodes.length * this.getTypeSpeed());
-        break;
+    this.state.visibleNodes.forEach((node, index) => {
+      if (node.type === NodeType.Character) {
+        effectPromises.push(applyEffectToNode(node.node as HTMLElement, index));
+      }
+    });
 
-      case TextEffect.Rainbow:
-        const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
-        nodes.forEach((node, index) => {
-          const element = node.node as HTMLElement;
-          element.style.color = colors[index % colors.length];
-          element.style.opacity = '0';
-          element.style.transition = 'opacity 0.1s ease-in-out';
+    await Promise.all(effectPromises);
 
-          setTimeout(() => {
-            element.style.opacity = '1';
-          }, index * 20);
-        });
-        await this.wait(nodes.length * 20 + 200);
-        break;
+    this.resetEffectStyles(effect);
+  }
 
-      case TextEffect.None:
-      default:
-        // No effect, do nothing
-        break;
-    }
-
-    // Reset styles after effect
-    nodes.forEach((node) => {
-      const element = node.node as HTMLElement;
-      element.style.removeProperty('transition');
-      element.style.removeProperty('transform');
-      element.style.removeProperty('opacity');
-      element.style.removeProperty('visibility');
-      // Don't reset color for rainbow effect
-      if (effect !== TextEffect.Rainbow) {
-        element.style.removeProperty('color');
+  private resetEffectStyles(effect: TextEffect): void {
+    this.state.visibleNodes.forEach((node) => {
+      if (node.type === NodeType.Character) {
+        const element = node.node as HTMLElement;
+        element.style.removeProperty('transition');
+        element.style.removeProperty('transform');
+        element.style.removeProperty('opacity');
+        element.style.removeProperty('visibility');
+        // Don't reset color for rainbow effect
+        if (effect !== TextEffect.Rainbow) {
+          element.style.removeProperty('color');
+        }
       }
     });
   }
 
-  private wait(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  private async wait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        this.emit('pauseEnd');
+        resolve();
+      }, ms);
+    });
   }
 }

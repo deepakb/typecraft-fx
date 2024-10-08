@@ -1,26 +1,22 @@
-import { lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 import type { FC } from 'react';
-import { UseTypecraftProps } from './useTypecraft';
 import { TypecraftOptions } from '../core/types';
 
+// Define the props for the TypecraftComponent
+export interface TypecraftComponentProps extends TypecraftOptions {
+  onInit?: (typecraft: any) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// Lazy load the TypecraftComponent
 const TypecraftComponentLazy = lazy(() =>
   import('./TypecraftComponent').then((module) => ({ default: module.TypecraftComponent }))
 );
 
-type TypecraftComponentProps = Omit<UseTypecraftProps, 'options'> & {
-  options?: TypecraftOptions;
-};
-
-export const TypecraftComponentWithSuspense: FC<UseTypecraftProps> = (props) => {
-  const { options, ...restProps } = props;
-  const componentProps: TypecraftComponentProps = {
-    ...restProps,
-    options: options as TypecraftOptions,
-  };
-
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <TypecraftComponentLazy {...componentProps} />
-    </Suspense>
-  );
-};
+// Create a wrapper component that includes Suspense
+export const TypecraftComponentWithSuspense: FC<TypecraftComponentProps> = (props) => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <TypecraftComponentLazy {...props} />
+  </Suspense>
+);

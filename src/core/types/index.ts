@@ -6,7 +6,8 @@ export interface CursorOptions {
     min: number;
     max: number;
   };
-  cursorStyle: CursorStyle;
+  style: CursorStyle;
+  blink: boolean;
 }
 
 export interface SpeedOptions {
@@ -48,11 +49,8 @@ export interface TypecraftOptions {
   cursor: CursorOptions;
   pauseFor: number;
   direction: Direction;
-  cursorStyle: CursorStyle;
   textEffect: TextEffect;
   easingFunction: EasingFunction;
-  cursorCharacter: string;
-  cursorBlink: boolean;
   html: boolean;
 }
 
@@ -69,6 +67,7 @@ export interface TypecraftState {
   cursorBlinkState: boolean;
   lastCursorBlinkTime: number;
   cursorPosition: number;
+  lastOperation: QueueActionType | null;
 }
 
 export type EventQueue = Array<{

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
-import { TypecraftOptions, EventCallback } from '../core/types';
+import { TypecraftOptions, EventCallback, CursorStyle, Direction, TextEffect } from '../core/types';
 
 export interface UseTypecraftProps {
   options?: Partial<TypecraftOptions>;
@@ -16,6 +16,26 @@ export interface UseTypecraftProps {
   onPauseEnd?: EventCallback;
   onComplete?: EventCallback;
 }
+
+const defaultOptions: TypecraftOptions = {
+  strings: [],
+  speed: 50,
+  loop: false,
+  autoStart: false,
+  cursor: {
+    text: '|',
+    color: 'black',
+    blinkSpeed: 500,
+    opacity: { min: 0, max: 1 },
+    style: CursorStyle.Solid,
+    blink: false,
+  },
+  pauseFor: 1500,
+  direction: Direction.LTR,
+  textEffect: TextEffect.None,
+  easingFunction: (t) => t,
+  html: false,
+};
 
 export function useTypecraft({
   options,
@@ -34,9 +54,18 @@ export function useTypecraft({
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const TypecraftRef = useRef<TypecraftEngine | null>(null);
 
+  const mergedOptions = {
+    ...defaultOptions,
+    ...options,
+    cursor: {
+      ...defaultOptions.cursor,
+      ...options?.cursor,
+    },
+  };
+
   useEffect(() => {
     if (element && !TypecraftRef.current) {
-      const instance = new TypecraftEngine(element, options);
+      const instance = new TypecraftEngine(element, mergedOptions);
       TypecraftRef.current = instance;
 
       if (onInit) {
@@ -74,7 +103,7 @@ export function useTypecraft({
     };
   }, [
     element,
-    options,
+    mergedOptions,
     onInit,
     onTypeStart,
     onTypeChar,
@@ -88,5 +117,9 @@ export function useTypecraft({
     onComplete,
   ]);
 
-  return { setElement, typecraft: TypecraftRef.current };
+  return {
+    setElement,
+    typecraft: TypecraftRef.current,
+    cursorStyle: mergedOptions.cursor.style,
+  };
 }

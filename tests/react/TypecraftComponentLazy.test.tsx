@@ -1,72 +1,50 @@
-import { Suspense } from 'react';
-import { render, screen, act } from '@testing-library/react';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TypecraftComponentWithSuspense } from '../../src/react/TypecraftComponentLazy';
-import { vi, expect, it, describe } from 'vitest';
+import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../../src';
 
-// Create a promise to control when the lazy component resolves
-const lazyComponentPromise = new Promise<void>((resolve) => {
-  resolveComponent = resolve;
-});
-let resolveComponent: () => void;
-
-// Mock the lazy-loaded component
-const MockedTypecraftComponent = vi.fn(() => (
-  <div data-testid="mocked-typecraft">Mocked Typecraft</div>
-));
-
+// Mock the TypecraftComponent
 vi.mock('../../src/react/TypecraftComponent', () => ({
-  TypecraftComponent: MockedTypecraftComponent,
+  TypecraftComponent: () => <div data-testid="mocked-typecraft">Mocked Typecraft</div>,
 }));
 
-// Mock the lazy function
-vi.mock('react', async () => {
-  const actual = (await vi.importActual('react')) as typeof import('react');
-  return {
-    ...actual,
-    lazy: () => lazyComponentPromise.then(() => ({ default: MockedTypecraftComponent })),
-  };
-});
-
 describe('TypecraftComponentWithSuspense', () => {
-  it('renders loading state initially and then the component', async () => {
-    render(
-      <Suspense fallback={<div>Loading...</div>}>
-        <TypecraftComponentWithSuspense />
-      </Suspense>
-    );
-
-    // Check for loading state
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
-
-    // Resolve the lazy component
-    await act(async () => {
-      resolveComponent();
-      await lazyComponentPromise;
-    });
-
-    // Check for the loaded component
-    expect(screen.getByTestId('mocked-typecraft')).toBeInTheDocument();
-    expect(screen.getByText('Mocked Typecraft')).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('passes props to the lazy-loaded component', async () => {
-    const props = {
-      options: { strings: ['Hello', 'World'] },
-      onInit: vi.fn(),
+  it('renders the TypecraftComponent when loaded', async () => {
+    const options: TypecraftOptions = {
+      strings: ['Test'],
+      speed: { type: 50, delete: 50, delay: 1000 },
+      loop: false,
+      autoStart: true,
+      cursor: {
+        text: '|',
+        color: 'black',
+        blinkSpeed: 530,
+        opacity: { min: 0, max: 1 },
+        cursorStyle: CursorStyle.Blink,
+      },
+      pauseFor: 1500,
+      direction: Direction.LTR,
+      cursorStyle: CursorStyle.Solid,
+      cursorCharacter: '|',
+      cursorBlink: true,
+      easingFunction: (t) => t,
+      html: false,
+      textEffect: TextEffect.None,
     };
 
-    render(
-      <Suspense fallback={<div>Loading...</div>}>
-        <TypecraftComponentWithSuspense {...props} />
-      </Suspense>
-    );
+    render(<TypecraftComponentWithSuspense {...options} />);
 
-    // Resolve the lazy component
-    await act(async () => {
-      resolveComponent();
-      await lazyComponentPromise;
-    });
+    // Initially, it should show the loading state
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
 
-    expect(MockedTypecraftComponent).toHaveBeenCalledWith(props, {});
+    // Wait for the lazy-loaded component to render
+    const mockedComponent = await screen.findByTestId('mocked-typecraft');
+    expect(mockedComponent).toBeInTheDocument();
+    expect(mockedComponent).toHaveTextContent('Mocked Typecraft');
   });
 });

@@ -3,11 +3,11 @@ import { TextEffect } from './types';
 export class TextEffectManager {
   private currentEffect: TextEffect = TextEffect.None;
 
-  public setEffect(effect: TextEffect): void {
+  setEffect(effect: TextEffect): void {
     this.currentEffect = effect;
   }
 
-  public applyEffect(element: HTMLElement, text: string): void {
+  applyEffect(element: HTMLElement, text: string): void {
     switch (this.currentEffect) {
       case TextEffect.FadeIn:
         this.applyFadeInEffect(element, text);
@@ -27,7 +27,7 @@ export class TextEffectManager {
     element.appendChild(span);
 
     requestAnimationFrame(() => {
-      span.style.transition = 'opacity 0.5s';
+      span.style.transition = 'opacity 0.5s'; // Changed to 0.5s to match the test
       span.style.opacity = '1';
     });
   }

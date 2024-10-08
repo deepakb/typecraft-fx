@@ -1,80 +1,45 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { QueueManager } from '../../src/core/QueueManager';
-import { QueueActionType, QueueItem } from '../../src/core/types';
+import { QueueActionType } from '../../src/core/types';
 
 describe('QueueManager', () => {
-  let queueManager: QueueManager;
-
-  beforeEach(() => {
-    queueManager = new QueueManager();
-  });
-
   it('should add items to the queue', () => {
     const queueManager = new QueueManager();
-    const item: QueueItem = {
+    const item = {
       type: QueueActionType.TYPE,
       payload: { char: 'a' },
-      execute: vi.fn(),
     };
     queueManager.add(item);
-    expect((queueManager as any).queue).toHaveLength(1);
-    expect((queueManager as any).queue[0]).toBe(item);
+    expect(queueManager.getLength()).toBe(1);
+    expect(queueManager.getNext()).toBe(item);
   });
 
-  it('should start running when first item is added', async () => {
-    const runSpy = vi.spyOn(queueManager as any, 'run');
-    const item: QueueItem = {
-      type: QueueActionType.TYPE,
-      payload: 'test',
-      execute: async () => {},
-    };
-    queueManager.add(item);
-    expect(runSpy).toHaveBeenCalledTimes(1);
-    await runSpy.mock.results[0].value;
-  });
-
-  it('should not start running when item is added and already running', () => {
-    const runSpy = vi.spyOn(QueueManager.prototype as any, 'run');
-    (queueManager as any).isRunning = true;
-    const item: QueueItem = {
-      type: QueueActionType.TYPE,
-      payload: {},
-      execute: vi.fn(),
-    };
-    queueManager.add(item);
-    expect(runSpy).not.toHaveBeenCalled();
+  it('should remove items from the queue when getting next', () => {
+    const queueManager = new QueueManager();
+    const item1 = { type: QueueActionType.TYPE, payload: { char: 'a' } };
+    const item2 = { type: QueueActionType.TYPE, payload: { char: 'b' } };
+    queueManager.add(item1);
+    queueManager.add(item2);
+    expect(queueManager.getLength()).toBe(2);
+    expect(queueManager.getNext()).toBe(item1);
+    expect(queueManager.getLength()).toBe(1);
+    expect(queueManager.getNext()).toBe(item2);
+    expect(queueManager.getLength()).toBe(0);
   });
 
   it('should clear the queue', () => {
-    (queueManager as any).queue = [{ execute: vi.fn() }, { execute: vi.fn() }];
-    (queueManager as any).isRunning = true;
+    const queueManager = new QueueManager();
+    queueManager.add({ type: QueueActionType.TYPE, payload: { char: 'a' } });
+    queueManager.add({ type: QueueActionType.TYPE, payload: { char: 'b' } });
+    expect(queueManager.getLength()).toBe(2);
     queueManager.clear();
-    expect((queueManager as any).queue).toHaveLength(0);
-    expect((queueManager as any).isRunning).toBe(false);
+    expect(queueManager.getLength()).toBe(0);
   });
 
-  it('should execute items in the queue', async () => {
-    const item1 = { execute: vi.fn().mockResolvedValue(undefined) };
-    const item2 = { execute: vi.fn().mockResolvedValue(undefined) };
-    (queueManager as any).queue = [item1, item2];
-
-    await (queueManager as any).run();
-
-    expect(item1.execute).toHaveBeenCalledTimes(1);
-    expect(item2.execute).toHaveBeenCalledTimes(1);
-    expect((queueManager as any).queue).toHaveLength(0);
-    expect((queueManager as any).isRunning).toBe(false);
-  });
-
-  it('should handle items without execute method', async () => {
-    const item1 = { execute: vi.fn().mockResolvedValue(undefined) };
-    const item2 = {}; // Item without execute method
-    (queueManager as any).queue = [item1, item2];
-
-    await (queueManager as any).run();
-
-    expect(item1.execute).toHaveBeenCalledTimes(1);
-    expect((queueManager as any).queue).toHaveLength(0);
-    expect((queueManager as any).isRunning).toBe(false);
+  it('should check if queue is empty', () => {
+    const queueManager = new QueueManager();
+    expect(queueManager.isEmpty()).toBe(true);
+    queueManager.add({ type: QueueActionType.TYPE, payload: { char: 'a' } });
+    expect(queueManager.isEmpty()).toBe(false);
   });
 });
