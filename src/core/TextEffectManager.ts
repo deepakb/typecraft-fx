@@ -59,13 +59,13 @@ export class TextEffectManager {
     setTimeout(() => {
       glitchInterval = window.setInterval(() => {
         node.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
-      }, 50);
+      }, 25);
       setTimeout(() => {
         clearInterval(glitchInterval);
         node.textContent = originalChar;
         resolve();
       }, 200);
-    }, index * 50);
+    }, index * 25);
   }
 
   private applyTypecraftEffect(
@@ -94,12 +94,11 @@ export class TextEffectManager {
 
   public resetEffectStyles(nodes: HTMLElement[], effect: TextEffect): void {
     nodes.forEach((element) => {
-      element.style.removeProperty('transition');
-      element.style.removeProperty('transform');
-      element.style.removeProperty('opacity');
-      element.style.removeProperty('visibility');
-      if (effect !== TextEffect.Rainbow) {
-        element.style.removeProperty('color');
+      if (effect === TextEffect.Rainbow) {
+        const color = element.style.color;
+        element.style.cssText = color ? `color: ${color};` : '';
+      } else {
+        element.removeAttribute('style');
       }
     });
   }

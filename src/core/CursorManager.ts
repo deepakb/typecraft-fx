@@ -11,25 +11,29 @@ export class CursorManager {
     this.options = options;
     this.cursorElement = this.createCursorElement();
     parentElement.appendChild(this.cursorElement);
-    this.startBlinking();
+    // this.startBlinking();
+    this.cursorBlinkState = true;
+    this.lastCursorBlinkTime = Date.now();
+    this.blinkInterval = null;
   }
 
   private createCursorElement(): HTMLElement {
     const cursor = document.createElement('span');
     cursor.textContent = this.options.text;
     cursor.style.color = this.options.color;
+    cursor.style.opacity = this.options.opacity.max.toString();
     cursor.className = `typecraft-cursor typecraft-cursor-${this.options.style}`;
     return cursor;
   }
 
   public startBlinking(): void {
-    if (this.options.blink) {
+    if (this.options.blink && this.blinkInterval === null) {
       this.animateCursor();
     }
   }
 
   public stopBlinking(): void {
-    if (this.blinkInterval) {
+    if (this.blinkInterval !== null) {
       cancelAnimationFrame(this.blinkInterval);
       this.blinkInterval = null;
     }
@@ -76,6 +80,8 @@ export class CursorManager {
       this.lastCursorBlinkTime = now;
     }
 
-    this.blinkInterval = requestAnimationFrame(() => this.animateCursor());
+    if (this.options.blink) {
+      this.blinkInterval = requestAnimationFrame(() => this.animateCursor());
+    }
   }
 }

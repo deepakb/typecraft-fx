@@ -215,10 +215,6 @@ export class TypecraftEngine {
     return this;
   }
 
-  private updateCursorPosition(): void {
-    this.cursorManager.updateCursorPosition(this.state.element);
-  }
-
   private resetState(): void {
     this.state.visibleNodes = [];
     this.state.element.innerHTML = '';
@@ -409,10 +405,12 @@ export class TypecraftEngine {
     this.state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
     this.state.visibleNodes.push({ type: NodeType.Character, node: charSpan });
     this.cursorManager.updateCursorPosition(this.state.element);
-    this.applyTextEffect(this.options.textEffect);
-    await this.wait(
-      typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type
-    );
+
+    const typeSpeed =
+      typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type;
+    await new Promise((resolve) => setTimeout(resolve, typeSpeed));
+
+    await this.applyTextEffect(this.options.textEffect);
     this.emit('typeChar', { char });
   }
 
@@ -467,6 +465,10 @@ export class TypecraftEngine {
   }
 
   private async applyTextEffect(effect: TextEffect): Promise<void> {
+    if (effect === TextEffect.None) {
+      return;
+    }
+
     const nodes = this.state.visibleNodes
       .filter((node) => node.type === NodeType.Character)
       .map((node) => node.node as HTMLElement);
