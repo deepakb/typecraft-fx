@@ -9,11 +9,12 @@ describe('CursorManager', () => {
   beforeEach(() => {
     parentElement = document.createElement('div');
     defaultOptions = {
-      cursorStyle: CursorStyle.Solid,
       text: '|',
       opacity: { min: 0, max: 1 },
       color: 'black',
       blinkSpeed: 500,
+      style: CursorStyle.Blink,
+      blink: true,
     };
     vi.useFakeTimers();
   });

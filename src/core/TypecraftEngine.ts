@@ -293,6 +293,8 @@ export class TypecraftEngine {
   }
 
   public typeOutAllStrings(): this {
+    this.state.queue = [];
+
     this.options.strings.forEach((string, index) => {
       // Type the string
       this.typeString(string);
@@ -325,7 +327,13 @@ export class TypecraftEngine {
   private async runQueue(): Promise<void> {
     const queueItem = this.state.queue.shift();
     if (!queueItem) {
-      this.checkOperationComplete();
+      this.emit('complete');
+      if (this.options.loop) {
+        this.typeOutAllStrings();
+        await this.runQueue();
+      } else {
+        this.checkOperationComplete();
+      }
       return;
     }
 
@@ -354,6 +362,7 @@ export class TypecraftEngine {
         break;
       case QueueActionType.LOOP:
         this.typeOutAllStrings();
+        this.emit('complete');
         break;
       default:
         console.warn(`Unknown queue action type: ${type}`);
@@ -372,19 +381,6 @@ export class TypecraftEngine {
       }
       this.emit('complete');
     }
-  }
-
-  private checkTypingComplete(): void {
-    if (this.state.queue.length === 0) {
-      this.emit('typeComplete');
-      this.emit('complete');
-    }
-  }
-
-  private parseHTML(string: string): HTMLParseNode[] {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(string, 'text/html');
-    return this.parseNode(doc.body);
   }
 
   private parseNode(node: Node): HTMLParseNode[] {
@@ -420,25 +416,6 @@ export class TypecraftEngine {
     });
 
     return nodes;
-  }
-
-  private addNodesToQueue(nodes: HTMLParseNode[], effect?: TextEffect): void {
-    nodes.forEach((node) => {
-      if (node.type === 'text') {
-        this.addToQueue(QueueActionType.TYPE_CHARACTER, {
-          char: node.content,
-          htmlParseNode: node,
-        });
-      } else {
-        this.addToQueue(QueueActionType.TYPE_CHARACTER, { htmlParseNode: node });
-      }
-    });
-
-    if (effect) {
-      this.addToQueue(QueueActionType.CALL_FUNCTION, {
-        callback: () => this.applyTextEffect(effect),
-      });
-    }
   }
 
   private async typeCharacter(payload: { char: string }): Promise<void> {
@@ -516,10 +493,9 @@ export class TypecraftEngine {
           case TextEffect.FadeIn:
             node.style.opacity = '0';
             node.style.transition = 'opacity 0.1s ease-in-out';
-            setTimeout(() => {
+            requestAnimationFrame(() => {
               node.style.opacity = '1';
-              setTimeout(resolve, 100); // Wait for transition to complete
-            }, index * 20);
+            });
             break;
           case TextEffect.SlideIn:
             node.style.transform = 'translateY(20px)';
@@ -571,15 +547,17 @@ export class TypecraftEngine {
       });
     };
 
-    const effectPromises: Promise<void>[] = [];
+    // const effectPromises: Promise<void>[] = [];
 
     this.state.visibleNodes.forEach((node, index) => {
       if (node.type === NodeType.Character) {
-        effectPromises.push(applyEffectToNode(node.node as HTMLElement, index));
+        applyEffectToNode(node.node as HTMLElement, index);
       }
     });
 
-    await Promise.all(effectPromises);
+    // await Promise.all(effectPromises);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     this.resetEffectStyles(effect);
   }

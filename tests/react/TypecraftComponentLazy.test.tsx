@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { TypecraftComponentWithSuspense } from '../../src/react/TypecraftComponentLazy';
@@ -25,13 +24,11 @@ describe('TypecraftComponentWithSuspense', () => {
         color: 'black',
         blinkSpeed: 530,
         opacity: { min: 0, max: 1 },
-        cursorStyle: CursorStyle.Blink,
+        style: CursorStyle.Blink,
+        blink: true,
       },
       pauseFor: 1500,
       direction: Direction.LTR,
-      cursorStyle: CursorStyle.Solid,
-      cursorCharacter: '|',
-      cursorBlink: true,
       easingFunction: (t) => t,
       html: false,
       textEffect: TextEffect.None,

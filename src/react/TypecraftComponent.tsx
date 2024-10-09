@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
 import { TypecraftOptions } from '../core/types';
 
-interface TypecraftComponentProps extends TypecraftOptions {
+export interface TypecraftComponentProps extends TypecraftOptions {
   className?: string;
   style?: React.CSSProperties;
 }

@@ -34,7 +34,7 @@ describe('TextEffectManager', () => {
 
     vi.runAllTimers();
 
-    expect(span.style.transition).toBe('opacity 0.5s');
+    expect(span.style.transition).toBe('opacity 0.1s ease-in-out');
     expect(span.style.opacity).toBe('1');
   });
 
