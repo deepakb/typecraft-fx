@@ -219,9 +219,20 @@ export class TypecraftEngine {
     this.cursorManager.updateCursorPosition(this.state.element);
   }
 
+  private resetState(): void {
+    this.state.visibleNodes = [];
+    this.state.element.innerHTML = '';
+    if (this.cursorManager) {
+      this.cursorManager.removeCursor();
+    }
+    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
+    this.cursorManager.updateCursorPosition(this.state.element);
+  }
+
   public start(): Promise<void> {
-    this.setupCursor();
-    this.updateCursorPosition();
+    this.resetState();
+    // this.setupCursor();
+    // this.updateCursorPosition();
     this.updateCursorStyle();
     if (this.options.strings.length && !this.state.queue.length) {
       this.typeOutAllStrings();
@@ -395,7 +406,7 @@ export class TypecraftEngine {
     const { char } = payload;
     const charSpan = document.createElement('span');
     charSpan.textContent = char;
-    this.state.element.appendChild(charSpan);
+    this.state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
     this.state.visibleNodes.push({ type: NodeType.Character, node: charSpan });
     this.cursorManager.updateCursorPosition(this.state.element);
     this.applyTextEffect(this.options.textEffect);

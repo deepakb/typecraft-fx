@@ -54,6 +54,16 @@ export class CursorManager {
     this.cursorElement.remove();
   }
 
+  public removeCursor(): void {
+    if (this.cursorElement && this.cursorElement.parentNode) {
+      this.cursorElement.parentNode.removeChild(this.cursorElement);
+    }
+  }
+
+  public getCursorElement(): HTMLElement {
+    return this.cursorElement;
+  }
+
   private animateCursor(): void {
     const now = Date.now();
     const delta = now - this.lastCursorBlinkTime;
