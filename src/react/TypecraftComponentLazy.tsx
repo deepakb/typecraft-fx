@@ -4,6 +4,7 @@ import { TypecraftOptions } from '../core/types';
 
 // Define the props for the TypecraftComponent
 export interface TypecraftComponentProps extends TypecraftOptions {
+  /* eslint-disable-next-line no-unused-vars */
   onInit?: (typecraft: any) => void;
   className?: string;
   style?: React.CSSProperties;

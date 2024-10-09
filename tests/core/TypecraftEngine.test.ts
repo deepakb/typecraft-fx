@@ -113,9 +113,6 @@ describe('TypecraftEngine', () => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const cursorElement = container.querySelector('.typecraft-cursor');
-    console.log('Cursor element:', cursorElement);
-    console.log('Cursor element class list:', cursorElement?.classList);
-    console.log('Container innerHTML:', container.innerHTML);
     expect(cursorElement?.classList.contains('typecraft-cursor-solid')).toBe(true);
   });
 
@@ -136,24 +133,17 @@ describe('TypecraftEngine', () => {
       speed: 0, // Set speed to 0 to type instantly
     });
 
-    console.log('Engine created');
-
     // Use a custom event to signal when typing is complete
     const typingComplete = new Promise<void>((resolve) => {
       engine.on('complete', () => {
-        console.log('Typing complete event fired');
         resolve();
       });
     });
 
     await engine.start();
-    console.log('Engine started');
     await typingComplete;
-    console.log('Typing complete');
 
     const characters = container.querySelectorAll('span:not(.typecraft-cursor)');
-    console.log('Number of characters:', characters.length);
-    console.log('Container innerHTML:', container.innerHTML);
 
     // Wait for all characters to reach full opacity
     await new Promise<void>((resolve) => {
@@ -162,10 +152,8 @@ describe('TypecraftEngine', () => {
           (char) => (char as HTMLElement).style.opacity === '1'
         );
         if (allFullOpacity) {
-          console.log('All characters reached full opacity');
           resolve();
         } else {
-          console.log('Not all characters at full opacity, checking again...');
           setTimeout(checkOpacity, 100);
         }
       };
@@ -175,13 +163,9 @@ describe('TypecraftEngine', () => {
     // Verify the final state
     characters.forEach((char) => {
       const htmlChar = char as HTMLElement;
-      console.log('Character opacity:', htmlChar.style.opacity);
-      console.log('Character transition:', htmlChar.style.transition);
       expect(htmlChar.style.opacity).toBe('1');
       expect(htmlChar.style.transition).toBe('opacity 0.1s ease-in-out');
     });
-
-    console.log('Test completed successfully');
   }, 15000); // Increase the timeout to 15 seconds
 
   it('should handle loop option', async () => {

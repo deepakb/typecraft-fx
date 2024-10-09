@@ -208,9 +208,6 @@ export class TypecraftEngine {
 
     this.state.element.appendChild(this.state.cursorNode);
 
-    console.log('Cursor setup complete. Cursor node:', this.state.cursorNode);
-    console.log('Cursor class:', this.state.cursorNode.className);
-
     if (this.options.cursor.blink) {
       this.animateCursor();
     }
@@ -365,6 +362,7 @@ export class TypecraftEngine {
         this.emit('complete');
         break;
       default:
+        // eslint-disable-next-line no-console
         console.warn(`Unknown queue action type: ${type}`);
     }
 
@@ -468,7 +466,9 @@ export class TypecraftEngine {
   }
 
   private animateCursor(): void {
-    if (!this.state.cursorNode) return;
+    if (!this.state.cursorNode) {
+      return;
+    }
 
     const now = Date.now();
     const delta = now - (this.state.lastCursorBlinkTime || 0);
