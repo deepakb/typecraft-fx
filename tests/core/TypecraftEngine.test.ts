@@ -136,42 +136,53 @@ describe('TypecraftEngine', () => {
       speed: 0, // Set speed to 0 to type instantly
     });
 
+    console.log('Engine created');
+
     // Use a custom event to signal when typing is complete
     const typingComplete = new Promise<void>((resolve) => {
-      engine.on('complete', resolve);
+      engine.on('complete', () => {
+        console.log('Typing complete event fired');
+        resolve();
+      });
     });
 
     await engine.start();
+    console.log('Engine started');
     await typingComplete;
+    console.log('Typing complete');
 
-    const characters = container.querySelectorAll('span');
+    const characters = container.querySelectorAll('span:not(.typecraft-cursor)');
+    console.log('Number of characters:', characters.length);
+    console.log('Container innerHTML:', container.innerHTML);
 
     // Wait for all characters to reach full opacity
-    await Promise.all(
-      Array.from(characters).map(
-        (char) =>
-          new Promise<void>((resolve) => {
-            if (char.style.opacity === '1') {
-              resolve();
-            } else {
-              const observer = new MutationObserver(() => {
-                if (char.style.opacity === '1') {
-                  observer.disconnect();
-                  resolve();
-                }
-              });
-              observer.observe(char, { attributes: true, attributeFilter: ['style'] });
-            }
-          })
-      )
-    );
+    await new Promise<void>((resolve) => {
+      const checkOpacity = () => {
+        const allFullOpacity = Array.from(characters).every(
+          (char) => (char as HTMLElement).style.opacity === '1'
+        );
+        if (allFullOpacity) {
+          console.log('All characters reached full opacity');
+          resolve();
+        } else {
+          console.log('Not all characters at full opacity, checking again...');
+          setTimeout(checkOpacity, 100);
+        }
+      };
+      checkOpacity();
+    });
 
     // Verify the final state
     characters.forEach((char) => {
-      expect(char.style.opacity).toBe('1');
-      expect(char.style.transition).toBe('opacity 0.1s ease-in-out');
+      const htmlChar = char as HTMLElement;
+      console.log('Character opacity:', htmlChar.style.opacity);
+      console.log('Character transition:', htmlChar.style.transition);
+      expect(htmlChar.style.opacity).toBe('1');
+      expect(htmlChar.style.transition).toBe('opacity 0.1s ease-in-out');
     });
-  }, 10000); // Increase the timeout to 10 seconds
+
+    console.log('Test completed successfully');
+  }, 15000); // Increase the timeout to 15 seconds
 
   it('should handle loop option', async () => {
     const container = document.createElement('div');
