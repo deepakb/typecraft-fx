@@ -477,7 +477,7 @@ export class TypecraftEngine {
       await this.textEffectManager.applyTextEffect(effect, nodes[i], i, () => this.getTypeSpeed());
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await Promise.resolve();
 
     this.textEffectManager.resetEffectStyles(nodes, effect);
   }

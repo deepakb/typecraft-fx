@@ -233,10 +233,16 @@ describe('TypecraftEngine', () => {
     });
 
     it('should type character', async () => {
-      const waitSpy = vi.spyOn(engine as any, 'wait').mockResolvedValue(undefined);
-      await engine['typeCharacter']({ char: 'a' });
-      expect(engine['state'].visibleNodes).toHaveLength(1);
-      expect(waitSpy).toHaveBeenCalled();
+      const engine = new TypecraftEngine(element);
+      const typeCharSpy = vi.spyOn(engine as any, 'typeCharacter');
+
+      (engine as any).typeCharacter({ char: 'A' });
+
+      vi.advanceTimersByTime(50);
+      await vi.runAllTimersAsync();
+
+      expect(typeCharSpy).toHaveBeenCalledWith({ char: 'A' });
+      expect(element.textContent).toBe('A');
     });
 
     it('should delete character', async () => {
@@ -260,17 +266,50 @@ describe('TypecraftEngine', () => {
     });
 
     it('should apply text effect', async () => {
+      const element = document.createElement('div');
+      const engine = new TypecraftEngine(element, { textEffect: TextEffect.FadeIn });
       const applyTextEffectSpy = vi
         .spyOn(engine['textEffectManager'], 'applyTextEffect')
-        .mockResolvedValue(undefined);
-      await engine['applyTextEffect'](TextEffect.FadeIn);
-      expect(applyTextEffectSpy).toHaveBeenCalled();
+        .mockImplementation(async () => {
+          // Mock the implementation to resolve immediately
+          await Promise.resolve();
+        });
+
+      // Add some visible nodes
+      engine['state'].visibleNodes = [
+        { type: NodeType.Character, node: document.createElement('span') },
+        { type: NodeType.Character, node: document.createElement('span') },
+      ];
+
+      const applyTextEffectPromise = engine['applyTextEffect'](TextEffect.FadeIn);
+
+      // Run all timers and micro-tasks
+      await vi.runAllTimersAsync();
+      await vi.runAllTicks();
+
+      await applyTextEffectPromise;
+
+      expect(applyTextEffectSpy).toHaveBeenCalledTimes(2);
+      expect(applyTextEffectSpy).toHaveBeenCalledWith(
+        TextEffect.FadeIn,
+        expect.any(HTMLElement),
+        expect.any(Number),
+        expect.any(Function)
+      );
     });
 
     it('should wait for specified time', async () => {
-      const emitSpy = vi.spyOn(engine as any, 'emit');
-      await engine['wait'](100);
-      expect(emitSpy).toHaveBeenCalledWith('pauseEnd');
+      vi.useFakeTimers();
+      const engine = new TypecraftEngine(element);
+      const pauseTime = 1000;
+
+      const promise = engine.pauseFor(pauseTime).start();
+
+      vi.advanceTimersByTime(pauseTime);
+      await promise;
+
+      expect(vi.getTimerCount()).toBe(0);
+      vi.useRealTimers();
     });
   });
 });

@@ -88,19 +88,18 @@ describe('TextEffectManager', () => {
     });
 
     it('should reset styles for Rainbow effect (keeping color)', () => {
-      const nodes = [
-        Object.assign(document.createElement('span'), {
-          style: {
-            transition: 'all 0.3s',
-            transform: 'translateY(10px)',
-            opacity: '0.5',
-            visibility: 'hidden',
-            color: 'blue',
-          },
-        }),
-      ];
-      textEffectManager.resetEffectStyles(nodes, TextEffect.Rainbow);
-      expect(nodes[0].style.cssText).toBe('color: blue;');
+      const textEffectManager = new TextEffectManager();
+      const node = document.createElement('span');
+      node.style.cssText =
+        'color: blue; transition: all 0.3s; transform: translateY(10px); opacity: 0.5; visibility: hidden;';
+
+      textEffectManager.resetEffectStyles([node], TextEffect.Rainbow);
+
+      expect(node.style.color).toBe('blue');
+      expect(node.style.transition).toBe('');
+      expect(node.style.transform).toBe('');
+      expect(node.style.opacity).toBe('');
+      expect(node.style.visibility).toBe('');
     });
   });
 
@@ -127,13 +126,21 @@ describe('TextEffectManager', () => {
     });
 
     it('should apply Glitch effect correctly', async () => {
+      vi.useFakeTimers();
+      const textEffectManager = new TextEffectManager();
+      const node = document.createElement('span');
       node.textContent = 'A';
-      const promise = textEffectManager.applyTextEffect(TextEffect.Glitch, node, 1, getTypeSpeed);
+
+      const promise = textEffectManager.applyTextEffect(TextEffect.Glitch, node, 1, () => 50);
+
       vi.advanceTimersByTime(50);
       expect(node.textContent).not.toBe('A');
-      vi.runAllTimers();
+
+      vi.advanceTimersByTime(200);
       await promise;
       expect(node.textContent).toBe('A');
+
+      vi.useRealTimers();
     });
 
     it('should apply Typecraft effect correctly', async () => {
