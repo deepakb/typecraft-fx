@@ -11,16 +11,26 @@ import {
   HTMLParseNode,
   EasingFunction,
 } from './types';
+import { CursorManager } from './CursorManager';
+import { QueueManager } from './QueueManager';
+import { TextEffectManager } from './TextEffectManager';
 
 export class TypecraftEngine {
   private options: TypecraftOptions;
   private state: TypecraftState;
   private rafId: number | null = null;
+  private cursorManager: CursorManager;
+  private queueManager: QueueManager;
+  private textEffectManager: TextEffectManager;
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
     this.validateElement(element);
     this.options = this.mergeOptions(options);
     this.state = this.initializeState(element);
+    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
+    this.cursorManager.updateCursorPosition(this.state.element);
+    this.queueManager = new QueueManager();
+    this.textEffectManager = new TextEffectManager();
     this.init();
   }
 
@@ -92,20 +102,6 @@ export class TypecraftEngine {
       this.typeOutAllStrings();
     }
   }
-
-  // private initializeCursor(): void {
-  //   if (this.state.cursorNode) {
-  //     this.state.cursorNode.remove();
-  //   }
-  //   const cursorElement = document.createElement('span');
-  //   cursorElement.className = 'typecraft-cursor';
-  //   cursorElement.textContent = this.options.cursor.text;
-  //   if (this.options.cursorBlink) {
-  //     cursorElement.classList.add('typecraft-cursor-blink');
-  //   }
-  //   this.state.element.appendChild(cursorElement);
-  //   this.state.cursorNode = cursorElement;
-  // }
 
   private defaultEasing: EasingFunction = (t: number) => t;
 
@@ -198,19 +194,7 @@ export class TypecraftEngine {
   }
 
   private setupCursor(): void {
-    if (this.state.cursorNode) {
-      this.state.cursorNode.remove();
-    }
-
-    this.state.cursorNode = document.createElement('span');
-    this.state.cursorNode.textContent = this.options.cursor.text;
-    this.updateCursorStyle();
-
-    this.state.element.appendChild(this.state.cursorNode);
-
-    if (this.options.cursor.blink) {
-      this.animateCursor();
-    }
+    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
   }
 
   private updateCursorStyle(): void {
@@ -222,9 +206,7 @@ export class TypecraftEngine {
 
   public changeCursorStyle(style: CursorStyle): this {
     this.options.cursor.style = style;
-    if (this.state.cursorNode) {
-      this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${style}`;
-    }
+    this.cursorManager.changeCursorStyle(style);
     return this;
   }
 
@@ -234,14 +216,7 @@ export class TypecraftEngine {
   }
 
   private updateCursorPosition(): void {
-    if (this.state.cursorNode) {
-      this.state.element.removeChild(this.state.cursorNode);
-    }
-    const cursorSpan = document.createElement('span');
-    cursorSpan.textContent = this.options.cursor.text;
-    cursorSpan.className = 'typecraft-cursor';
-    this.state.cursorNode = cursorSpan;
-    this.state.element.appendChild(this.state.cursorNode);
+    this.cursorManager.updateCursorPosition(this.state.element);
   }
 
   public start(): Promise<void> {
@@ -262,7 +237,7 @@ export class TypecraftEngine {
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
     }
-    this.state.queue = [];
+    this.queueManager.clear();
   }
 
   public on(eventName: TypecraftEvent, callback: EventCallback): this {
@@ -318,11 +293,11 @@ export class TypecraftEngine {
   }
 
   private addToQueue(actionType: QueueActionType, payload?: any): void {
-    this.state.queue.push({ type: actionType, payload });
+    this.queueManager.add({ type: actionType, payload });
   }
 
   private async runQueue(): Promise<void> {
-    const queueItem = this.state.queue.shift();
+    const queueItem = this.queueManager.getNext();
     if (!queueItem) {
       this.emit('complete');
       if (this.options.loop) {
@@ -420,15 +395,9 @@ export class TypecraftEngine {
     const { char } = payload;
     const charSpan = document.createElement('span');
     charSpan.textContent = char;
-    if (this.state.cursorNode) {
-      this.state.element.insertBefore(charSpan, this.state.cursorNode);
-    } else {
-      this.state.element.appendChild(charSpan);
-      this.setupCursor();
-    }
+    this.state.element.appendChild(charSpan);
     this.state.visibleNodes.push({ type: NodeType.Character, node: charSpan });
-    this.updateCursorPosition();
-    this.updateCursorStyle();
+    this.cursorManager.updateCursorPosition(this.state.element);
     this.applyTextEffect(this.options.textEffect);
     await this.wait(
       typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type
@@ -442,7 +411,7 @@ export class TypecraftEngine {
       if (lastNode && lastNode.node.parentNode) {
         lastNode.node.parentNode.removeChild(lastNode.node);
       }
-      this.updateCursorPosition();
+      this.cursorManager.updateCursorPosition(this.state.element);
       const deleteSpeed =
         typeof this.options.speed === 'number'
           ? this.options.speed
@@ -487,95 +456,17 @@ export class TypecraftEngine {
   }
 
   private async applyTextEffect(effect: TextEffect): Promise<void> {
-    const applyEffectToNode = (node: HTMLElement, index: number): Promise<void> => {
-      return new Promise((resolve) => {
-        switch (effect) {
-          case TextEffect.FadeIn:
-            node.style.opacity = '0';
-            node.style.transition = 'opacity 0.1s ease-in-out';
-            requestAnimationFrame(() => {
-              node.style.opacity = '1';
-            });
-            break;
-          case TextEffect.SlideIn:
-            node.style.transform = 'translateY(20px)';
-            node.style.opacity = '0';
-            node.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-            setTimeout(() => {
-              node.style.transform = 'translateY(0)';
-              node.style.opacity = '1';
-              setTimeout(resolve, 200); // Wait for transition to complete
-            }, index * 20);
-            break;
-          case TextEffect.Glitch:
-            const glitchChars = '!@#$%^&*()_+-={}[]|;:,.<>?';
-            const originalChar = node.textContent || '';
-            let glitchInterval: number;
-            setTimeout(() => {
-              glitchInterval = window.setInterval(() => {
-                node.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
-              }, 50);
-              setTimeout(() => {
-                clearInterval(glitchInterval);
-                node.textContent = originalChar;
-                resolve();
-              }, 200);
-            }, index * 50);
-            break;
-          case TextEffect.Typecraft:
-            node.style.visibility = 'hidden';
-            setTimeout(() => {
-              node.style.visibility = 'visible';
-              resolve();
-            }, index * this.getTypeSpeed());
-            break;
-          case TextEffect.Rainbow:
-            const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
-            node.style.color = colors[index % colors.length];
-            node.style.opacity = '0';
-            node.style.transition = 'opacity 0.1s ease-in-out';
-            setTimeout(() => {
-              node.style.opacity = '1';
-              setTimeout(resolve, 100); // Wait for transition to complete
-            }, index * 20);
-            break;
-          case TextEffect.None:
-          default:
-            resolve();
-            break;
-        }
-      });
-    };
+    const nodes = this.state.visibleNodes
+      .filter((node) => node.type === NodeType.Character)
+      .map((node) => node.node as HTMLElement);
 
-    // const effectPromises: Promise<void>[] = [];
-
-    this.state.visibleNodes.forEach((node, index) => {
-      if (node.type === NodeType.Character) {
-        applyEffectToNode(node.node as HTMLElement, index);
-      }
-    });
-
-    // await Promise.all(effectPromises);
+    for (let i = 0; i < nodes.length; i++) {
+      await this.textEffectManager.applyTextEffect(effect, nodes[i], i, () => this.getTypeSpeed());
+    }
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    this.resetEffectStyles(effect);
-  }
-
-  private resetEffectStyles(effect: TextEffect): void {
-    this.state.visibleNodes.forEach((node) => {
-      if (node.type === NodeType.Character) {
-        const element = node.node as HTMLElement;
-        element.style.removeProperty('transition');
-        element.style.removeProperty('transform');
-        element.style.removeProperty('opacity');
-        element.style.removeProperty('visibility');
-        // Don't reset color for rainbow effect
-        if (effect !== TextEffect.Rainbow) {
-          element.style.removeProperty('color');
-        }
-      }
-    });
+    this.textEffectManager.resetEffectStyles(nodes, effect);
   }
 
   private async wait(ms: number): Promise<void> {

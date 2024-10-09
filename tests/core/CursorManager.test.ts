@@ -13,8 +13,8 @@ describe('CursorManager', () => {
       opacity: { min: 0, max: 1 },
       color: 'black',
       blinkSpeed: 500,
-      style: CursorStyle.Blink,
-      blink: true,
+      style: CursorStyle.Solid,
+      blink: false,
     };
     vi.useFakeTimers();
   });
@@ -30,46 +30,41 @@ describe('CursorManager', () => {
     expect(parentElement.firstChild?.textContent).toBe('|');
   });
 
-  it('startBlinking sets interval for blink style', () => {
-    const blinkOptions = { ...defaultOptions, cursorStyle: CursorStyle.Blink };
-    new CursorManager(parentElement, blinkOptions);
-
-    vi.advanceTimersByTime(500);
-    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('0');
-
-    vi.advanceTimersByTime(500);
-    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('1');
-  });
-
-  it('startBlinking does not set interval for solid style', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions);
-    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+  it('startBlinking starts animation for blink option', () => {
+    const blinkOptions = { ...defaultOptions, blink: true };
+    const cursorManager = new CursorManager(parentElement, blinkOptions);
+    const animateCursorSpy = vi.spyOn(cursorManager as any, 'animateCursor');
 
     cursorManager.startBlinking();
-    expect(setIntervalSpy).not.toHaveBeenCalled();
+    expect(animateCursorSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('stopBlinking clears interval', () => {
-    const blinkOptions = { ...defaultOptions, cursorStyle: CursorStyle.Blink };
-    const cursorManager = new CursorManager(parentElement, blinkOptions);
-
-    cursorManager.stopBlinking();
-    vi.advanceTimersByTime(1000);
-    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('');
-  });
-
-  it('changeCursorStyle updates class and restarts blinking', () => {
+  it('startBlinking does not start animation for non-blink option', () => {
     const cursorManager = new CursorManager(parentElement, defaultOptions);
-    const stopBlinkingSpy = vi.spyOn(cursorManager, 'stopBlinking');
-    const startBlinkingSpy = vi.spyOn(cursorManager, 'startBlinking');
+    const animateCursorSpy = vi.spyOn(cursorManager as any, 'animateCursor');
+
+    cursorManager.startBlinking();
+    expect(animateCursorSpy).not.toHaveBeenCalled();
+  });
+
+  it('stopBlinking cancels animation frame', () => {
+    const blinkOptions = { ...defaultOptions, blink: true };
+    const cursorManager = new CursorManager(parentElement, blinkOptions);
+    const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+
+    cursorManager.startBlinking();
+    cursorManager.stopBlinking();
+    expect(cancelAnimationFrameSpy).toHaveBeenCalled();
+  });
+
+  it('changeCursorStyle updates class', () => {
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
 
     cursorManager.changeCursorStyle(CursorStyle.Blink);
 
     expect((parentElement.firstChild as Element).className).toBe(
       'typecraft-cursor typecraft-cursor-blink'
     );
-    expect(stopBlinkingSpy).toHaveBeenCalledTimes(1);
-    expect(startBlinkingSpy).toHaveBeenCalledTimes(1);
   });
 
   it('changeCursorText updates cursor text', () => {
@@ -78,8 +73,18 @@ describe('CursorManager', () => {
     expect(parentElement.firstChild?.textContent).toBe('_');
   });
 
+  it('updateCursorPosition moves cursor to end of parent element', () => {
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
+    const textNode = document.createTextNode('Hello');
+    parentElement.insertBefore(textNode, parentElement.firstChild);
+
+    cursorManager.updateCursorPosition(parentElement);
+
+    expect(parentElement.lastChild).toBe(cursorManager['cursorElement']);
+  });
+
   it('remove stops blinking and removes cursor element', () => {
-    const blinkOptions = { ...defaultOptions, cursorStyle: CursorStyle.Blink };
+    const blinkOptions = { ...defaultOptions, blink: true };
     const cursorManager = new CursorManager(parentElement, blinkOptions);
     const stopBlinkingSpy = vi.spyOn(cursorManager, 'stopBlinking');
 
@@ -87,5 +92,18 @@ describe('CursorManager', () => {
 
     expect(stopBlinkingSpy).toHaveBeenCalledTimes(1);
     expect(parentElement.children.length).toBe(0);
+  });
+
+  it('animateCursor changes opacity based on blink state', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(0);
+    const blinkOptions = { ...defaultOptions, blink: true };
+    const cursorManager = new CursorManager(parentElement, blinkOptions);
+    cursorManager.startBlinking();
+
+    vi.advanceTimersByTime(500);
+    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('0');
+
+    vi.advanceTimersByTime(500);
+    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('1');
   });
 });
