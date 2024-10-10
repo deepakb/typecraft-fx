@@ -24,10 +24,13 @@ describe('CursorManager', () => {
   });
 
   it('constructor creates and appends cursor element', () => {
-    new CursorManager(parentElement, defaultOptions);
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
     expect(parentElement.children.length).toBe(1);
-    expect(parentElement.firstChild).toBeInstanceOf(HTMLSpanElement);
-    expect(parentElement.firstChild?.textContent).toBe('|');
+    const cursorElement = cursorManager.getCursorElement();
+    expect(cursorElement).toBeInstanceOf(HTMLSpanElement);
+    expect(cursorElement.textContent).toBe('|');
+    expect(cursorElement.style.color).toBe('black');
+    expect(cursorElement.className).toBe('typecraft-cursor typecraft-cursor-solid');
   });
 
   it('startBlinking starts animation for blink option', () => {
@@ -62,11 +65,7 @@ describe('CursorManager', () => {
   it('stopBlinking cancels animation frame', () => {
     const parentElement = document.createElement('div');
     const cursorManager = new CursorManager(parentElement, {
-      text: '|',
-      color: 'black',
-      blinkSpeed: 530,
-      opacity: { min: 0, max: 1 },
-      style: CursorStyle.Solid,
+      ...defaultOptions,
       blink: true,
     });
 
@@ -76,10 +75,13 @@ describe('CursorManager', () => {
     cursorManager.startBlinking();
 
     // Advance timers to ensure the animation frame is set
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(1000);
 
     // Stop blinking
     cursorManager.stopBlinking();
+
+    // Add a small delay to allow for the next animation frame
+    vi.advanceTimersByTime(16);
 
     expect(cancelAnimationFrameSpy).toHaveBeenCalled();
 
@@ -97,20 +99,18 @@ describe('CursorManager', () => {
     );
   });
 
-  it('changeCursorText updates cursor text', () => {
+  it('updateCursorPosition updates cursor position', () => {
     const cursorManager = new CursorManager(parentElement, defaultOptions);
-    cursorManager.changeCursorText('_');
-    expect(parentElement.firstChild?.textContent).toBe('_');
-  });
+    const targetElement = document.createElement('div');
+    Object.defineProperty(targetElement, 'getBoundingClientRect', {
+      value: () => ({ top: 10, right: 20 }),
+    });
 
-  it('updateCursorPosition moves cursor to end of parent element', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions);
-    const textNode = document.createTextNode('Hello');
-    parentElement.insertBefore(textNode, parentElement.firstChild);
+    cursorManager.updateCursorPosition(targetElement);
 
-    cursorManager.updateCursorPosition(parentElement);
-
-    expect(parentElement.lastChild).toBe(cursorManager['cursorElement']);
+    const cursorElement = cursorManager.getCursorElement();
+    expect(cursorElement.style.left).toBe('20px');
+    expect(cursorElement.style.top).toBe('10px');
   });
 
   it('remove stops blinking and removes cursor element', () => {
@@ -125,16 +125,104 @@ describe('CursorManager', () => {
   });
 
   it('animateCursor changes opacity based on blink state', () => {
-    vi.useFakeTimers();
-    const cursorManager = new CursorManager(parentElement, { ...defaultOptions, blink: true });
-    cursorManager.startBlinking();
+    const parentElement = document.createElement('div');
+    const options: CursorOptions = {
+      text: '|',
+      color: 'black',
+      style: CursorStyle.Solid,
+      blink: true,
+      blinkSpeed: 500,
+      opacity: { min: 0, max: 1 },
+    };
 
-    vi.advanceTimersByTime(500);
-    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('0');
+    const cursorManager = new CursorManager(parentElement, options);
+    const cursorElement = cursorManager.getCursorElement();
 
-    vi.advanceTimersByTime(500);
-    expect((parentElement.firstChild as HTMLElement).style.opacity).toBe('1');
+    // Initial state
+    expect(cursorElement.style.opacity).toBe('1');
 
-    vi.useRealTimers();
+    // Reset lastBlinkTime to ensure correct initial state
+    cursorManager.resetLastBlinkTime();
+
+    // Advance time by full blinkSpeed
+    cursorManager.forceAnimationFrame(500);
+    expect(cursorElement.style.opacity).toBe('0');
+
+    // Advance time by another full blinkSpeed
+    cursorManager.forceAnimationFrame(1000);
+    expect(cursorElement.style.opacity).toBe('1');
+  });
+
+  it('animateCursor changes opacity based on blink state and respects blinkSpeed', () => {
+    const parentElement = document.createElement('div');
+    const blinkSpeed = 500;
+    const options: CursorOptions = {
+      text: '|',
+      color: 'black',
+      style: CursorStyle.Solid,
+      blink: true,
+      blinkSpeed,
+      opacity: { min: 0, max: 1 },
+    };
+
+    const cursorManager = new CursorManager(parentElement, options);
+    const cursorElement = cursorManager.getCursorElement();
+
+    // Initial state
+    expect(cursorElement.style.opacity).toBe('1');
+
+    // Reset lastBlinkTime to ensure correct initial state
+    cursorManager.resetLastBlinkTime();
+
+    // Advance time to just before blinkSpeed (should not change)
+    cursorManager.forceAnimationFrame(blinkSpeed - 1);
+    expect(cursorElement.style.opacity).toBe('1');
+
+    // Advance time to full blinkSpeed (should change)
+    cursorManager.forceAnimationFrame(blinkSpeed);
+    expect(cursorElement.style.opacity).toBe('0');
+
+    // Advance time by full blinkSpeed again (should change back)
+    cursorManager.forceAnimationFrame(blinkSpeed * 2);
+    expect(cursorElement.style.opacity).toBe('1');
+  });
+
+  it('updateCursorPosition updates cursor position', () => {
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
+    const targetElement = document.createElement('div');
+    Object.defineProperty(targetElement, 'getBoundingClientRect', {
+      value: () => ({ top: 10, right: 20 }),
+    });
+
+    cursorManager.updateCursorPosition(targetElement);
+
+    const cursorElement = cursorManager.getCursorElement();
+    expect(cursorElement.style.left).toBe('20px');
+    expect(cursorElement.style.top).toBe('10px');
+  });
+
+  it('getCursorElement returns the cursor element', () => {
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
+    const cursorElement = cursorManager.getCursorElement();
+    expect(cursorElement).toBeInstanceOf(HTMLSpanElement);
+    expect(cursorElement.className).toContain('typecraft-cursor');
+  });
+
+  it('remove stops blinking and removes cursor element when parent exists', () => {
+    const blinkOptions = { ...defaultOptions, blink: true };
+    const cursorManager = new CursorManager(parentElement, blinkOptions);
+    const stopBlinkingSpy = vi.spyOn(cursorManager, 'stopBlinking');
+
+    cursorManager.remove();
+
+    expect(stopBlinkingSpy).toHaveBeenCalledTimes(1);
+    expect(parentElement.children.length).toBe(0);
+  });
+
+  it('remove handles case when cursor element has no parent', () => {
+    const cursorManager = new CursorManager(parentElement, defaultOptions);
+    parentElement.removeChild(cursorManager.getCursorElement());
+
+    expect(() => cursorManager.remove()).not.toThrow();
   });
 });

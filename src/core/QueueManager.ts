@@ -14,12 +14,4 @@ export class QueueManager {
   public clear(): void {
     this.queue = [];
   }
-
-  public isEmpty(): boolean {
-    return this.queue.length === 0;
-  }
-
-  public getLength(): number {
-    return this.queue.length;
-  }
 }

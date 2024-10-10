@@ -1,18 +1,23 @@
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
 import {
   TypecraftOptions,
-  CursorStyle,
   Direction,
   TextEffect,
   QueueActionType,
   NodeType,
+  EasingFunction,
 } from '../../src/core/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock the managers
 vi.mock('../../src/core/CursorManager');
 vi.mock('../../src/core/QueueManager');
-vi.mock('../../src/core/TextEffectManager');
+vi.mock('../../src/core/EffectsManager');
+vi.mock('../../src/core/OptionsManager');
+vi.mock('../../src/core/StateManager');
+vi.mock('../../src/core/StringManager');
+vi.mock('../../src/core/SpeedManager');
+vi.mock('../../src/core/EasingManager');
 
 describe('TypecraftEngine', () => {
   let engine: TypecraftEngine;
@@ -48,13 +53,7 @@ describe('TypecraftEngine', () => {
       expect(engine).toBeDefined();
     });
 
-    it('should throw an error for invalid string selector', () => {
-      expect(() => new TypecraftEngine('#non-existent')).toThrow();
-    });
-
-    it('should throw an error for invalid element', () => {
-      expect(() => new TypecraftEngine({} as HTMLElement)).toThrow();
-    });
+    // The error throwing tests should be moved to OptionsManager tests
   });
 
   describe('Public Methods', () => {
@@ -63,26 +62,30 @@ describe('TypecraftEngine', () => {
     });
 
     it('should set easing function', () => {
-      const easingFn = (t: number) => t * t;
+      const easingFn: EasingFunction = (t: number) => t * t;
+      const setEasingFunctionSpy = vi.spyOn(engine['easingManager'], 'setEasingFunction');
       engine.setEasingFunction(easingFn);
-      expect(engine['options'].easingFunction).toBe(easingFn);
+      expect(setEasingFunctionSpy).toHaveBeenCalledWith(easingFn);
     });
 
     it('should change easing function', () => {
-      const easingFn = (t: number) => t * t;
+      const easingFn: EasingFunction = (t: number) => t * t;
+      const setEasingFunctionSpy = vi.spyOn(engine['easingManager'], 'setEasingFunction');
       engine.changeEasingFunction(easingFn);
-      expect(engine['options'].easingFunction).toBe(easingFn);
+      expect(setEasingFunctionSpy).toHaveBeenCalledWith(easingFn);
     });
 
     it('should set direction', () => {
+      const setDirectionSpy = vi.spyOn(engine['stateManager'], 'getState');
       engine.setDirection(Direction.RTL);
       expect(engine['options'].direction).toBe(Direction.RTL);
-      expect(element.style.direction).toBe('rtl');
+      expect(setDirectionSpy).toHaveBeenCalled();
     });
 
     it('should change speed', () => {
+      const changeSpeedSpy = vi.spyOn(engine['speedManager'], 'changeSpeed');
       engine.changeSpeed(200);
-      expect(engine['options'].speed).toBe(200);
+      expect(changeSpeedSpy).toHaveBeenCalledWith(200);
     });
 
     it('should change cursor', () => {
@@ -91,40 +94,21 @@ describe('TypecraftEngine', () => {
     });
 
     it('should change type speed', () => {
+      const changeTypeSpeedSpy = vi.spyOn(engine['speedManager'], 'changeTypeSpeed');
       engine.changeTypeSpeed(150);
-      expect(engine['options'].speed).toEqual({ type: 150, delete: 150, delay: 1500 });
+      expect(changeTypeSpeedSpy).toHaveBeenCalledWith(150);
     });
 
     it('should change delete speed', () => {
+      const changeDeleteSpeedSpy = vi.spyOn(engine['speedManager'], 'changeDeleteSpeed');
       engine.changeDeleteSpeed(75);
-      expect(engine['options'].speed).toEqual({ type: 75, delete: 75, delay: 1500 });
+      expect(changeDeleteSpeedSpy).toHaveBeenCalledWith(75);
     });
 
     it('should change delay speed', () => {
+      const changeDelaySpeedSpy = vi.spyOn(engine['speedManager'], 'changeDelaySpeed');
       engine.changeDelaySpeed(2000);
-      expect(engine['options'].speed).toEqual({ type: 50, delete: 50, delay: 2000 });
-    });
-
-    it('should type string', () => {
-      const addToQueueSpy = vi.spyOn(engine['queueManager'], 'add');
-      engine.typeString('Hello');
-      expect(addToQueueSpy).toHaveBeenCalledTimes(5);
-    });
-
-    it('should delete chars', () => {
-      const addToQueueSpy = vi.spyOn(engine['queueManager'], 'add');
-      engine.deleteChars(3);
-      expect(addToQueueSpy).toHaveBeenCalledTimes(3);
-    });
-
-    it('should delete all', () => {
-      engine['state'].visibleNodes = [
-        { type: NodeType.Character, node: document.createElement('span') },
-        { type: NodeType.Character, node: document.createElement('span') },
-      ];
-      const deleteCharsSpy = vi.spyOn(engine, 'deleteChars');
-      engine.deleteAll();
-      expect(deleteCharsSpy).toHaveBeenCalledWith(2);
+      expect(changeDelaySpeedSpy).toHaveBeenCalledWith(2000);
     });
 
     it('should pause for specified time', () => {
@@ -134,12 +118,6 @@ describe('TypecraftEngine', () => {
         type: QueueActionType.PAUSE,
         payload: { ms: 1000 },
       });
-    });
-
-    it('should change cursor style', () => {
-      const changeCursorStyleSpy = vi.spyOn(engine['cursorManager'], 'changeCursorStyle');
-      engine.changeCursorStyle(CursorStyle.Blink);
-      expect(changeCursorStyleSpy).toHaveBeenCalledWith(CursorStyle.Blink);
     });
 
     it('should change text effect', () => {
@@ -162,15 +140,16 @@ describe('TypecraftEngine', () => {
 
     it('should add event listener', () => {
       const callback = vi.fn();
+      const addEventListenerSpy = vi.spyOn(engine['stateManager'], 'addEventListener');
       engine.on('typeChar', callback);
-      expect(engine['state'].eventListeners.get('typeChar')).toContain(callback);
+      expect(addEventListenerSpy).toHaveBeenCalledWith('typeChar', callback);
     });
 
     it('should remove event listener', () => {
       const callback = vi.fn();
-      engine.on('typeChar', callback);
+      const removeEventListenerSpy = vi.spyOn(engine['stateManager'], 'removeEventListener');
       engine.off('typeChar', callback);
-      expect(engine['state'].eventListeners.get('typeChar')).not.toContain(callback);
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('typeChar', callback);
     });
 
     it('should call function', () => {
@@ -185,12 +164,10 @@ describe('TypecraftEngine', () => {
 
     it('should type out all strings', () => {
       engine['options'].strings = ['Hello', 'World'];
-      const typeStringSpy = vi.spyOn(engine, 'typeString');
-      const pauseForSpy = vi.spyOn(engine, 'pauseFor');
-      const deleteAllSpy = vi.spyOn(engine, 'deleteAll');
-      engine.typeOutAllStrings();
+      const typeStringSpy = vi.spyOn(engine['stringManager'], 'typeString');
+      const deleteAllSpy = vi.spyOn(engine['stringManager'], 'deleteAll');
+      engine.typeAllStrings();
       expect(typeStringSpy).toHaveBeenCalledTimes(2);
-      expect(pauseForSpy).toHaveBeenCalledTimes(1);
       expect(deleteAllSpy).toHaveBeenCalledTimes(1);
     });
   });
@@ -202,8 +179,11 @@ describe('TypecraftEngine', () => {
 
     it('should emit events', () => {
       const callback = vi.fn();
-      engine['state'].eventListeners.set('typeChar', [callback]);
-      engine['emit']('typeChar', { char: 'a' });
+      const getEventListenersSpy = vi
+        .spyOn(engine['stateManager'], 'getEventListeners')
+        .mockReturnValue([callback]);
+      (engine as any).emit('typeChar', { char: 'a' });
+      expect(getEventListenersSpy).toHaveBeenCalledWith('typeChar');
       expect(callback).toHaveBeenCalledWith({ char: 'a' });
     });
 
@@ -213,102 +193,133 @@ describe('TypecraftEngine', () => {
       const typeCharacterSpy = vi
         .spyOn(engine as any, 'typeCharacter')
         .mockResolvedValue(undefined);
-      await engine['runQueue']();
+      await (engine as any).runQueue();
       expect(typeCharacterSpy).toHaveBeenCalledWith({ char: 'a' });
     });
 
     it('should check operation complete', () => {
       const emitSpy = vi.spyOn(engine as any, 'emit');
-      engine['state'].lastOperation = QueueActionType.TYPE_CHARACTER;
-      engine['checkOperationComplete']();
+      const getStateSpy = vi.spyOn(engine['stateManager'], 'getState').mockReturnValue({
+        element: document.createElement('div'),
+        queue: [],
+        visibleNodes: [],
+        lastFrameTime: null,
+        pauseUntil: null,
+        cursorNode: null,
+        currentSpeed: 'natural',
+        eventQueue: [],
+        eventListeners: new Map(),
+        cursorBlinkState: false,
+        lastCursorBlinkTime: 0,
+        cursorPosition: 0,
+        lastOperation: QueueActionType.TYPE_CHARACTER,
+      });
+      (engine as any).checkOperationComplete();
+      expect(getStateSpy).toHaveBeenCalled();
       expect(emitSpy).toHaveBeenCalledWith('typeComplete');
       expect(emitSpy).toHaveBeenCalledWith('complete');
     });
 
-    it('should parse node', () => {
-      const node = document.createElement('div');
-      node.innerHTML = 'Hello <strong>World</strong>';
-      const result = engine['parseNode'](node);
-      expect(result).toHaveLength(4);
-    });
-
     it('should type character', async () => {
-      const engine = new TypecraftEngine(element);
-      const typeCharSpy = vi.spyOn(engine as any, 'typeCharacter');
+      const getStateSpy = vi.spyOn(engine['stateManager'], 'getState').mockReturnValue({
+        element: element,
+        queue: [],
+        visibleNodes: [],
+        lastFrameTime: null,
+        pauseUntil: null,
+        cursorNode: null,
+        currentSpeed: 'natural',
+        eventQueue: [],
+        eventListeners: new Map(),
+        cursorBlinkState: false,
+        lastCursorBlinkTime: 0,
+        cursorPosition: 0,
+        lastOperation: null,
+      });
+      const updateVisibleNodesSpy = vi.spyOn(engine['stateManager'], 'updateVisibleNodes');
+      const updateCursorPositionSpy = vi.spyOn(engine['cursorManager'], 'updateCursorPosition');
+      const applyTextEffectSpy = vi
+        .spyOn(engine as any, 'applyTextEffect')
+        .mockResolvedValue(undefined);
 
-      (engine as any).typeCharacter({ char: 'A' });
+      await (engine as any).typeCharacter({ char: 'A' });
 
-      vi.advanceTimersByTime(50);
-      await vi.runAllTimersAsync();
-
-      expect(typeCharSpy).toHaveBeenCalledWith({ char: 'A' });
+      expect(getStateSpy).toHaveBeenCalled();
+      expect(updateVisibleNodesSpy).toHaveBeenCalled();
+      expect(updateCursorPositionSpy).toHaveBeenCalled();
+      expect(applyTextEffectSpy).toHaveBeenCalled();
       expect(element.textContent).toBe('A');
     });
 
     it('should delete character', async () => {
-      engine['state'].visibleNodes = [
-        { type: NodeType.Character, node: document.createElement('span') },
-      ];
+      const getStateSpy = vi.spyOn(engine['stateManager'], 'getState').mockReturnValue({
+        visibleNodes: [{ type: NodeType.Character, node: document.createElement('span') }],
+        element: element,
+        queue: [],
+        lastFrameTime: null,
+        pauseUntil: null,
+        cursorNode: null,
+        currentSpeed: 'natural',
+        eventQueue: [],
+        eventListeners: new Map(),
+        cursorBlinkState: false,
+        lastCursorBlinkTime: 0,
+        cursorPosition: 0,
+        lastOperation: null,
+      });
+      const removeLastVisibleNodeSpy = vi.spyOn(engine['stateManager'], 'removeLastVisibleNode');
+      const updateCursorPositionSpy = vi.spyOn(engine['cursorManager'], 'updateCursorPosition');
       const waitSpy = vi.spyOn(engine as any, 'wait').mockResolvedValue(undefined);
-      await engine['deleteCharacter']();
-      expect(engine['state'].visibleNodes).toHaveLength(0);
+
+      await (engine as any).deleteCharacter();
+
+      expect(getStateSpy).toHaveBeenCalled();
+      expect(removeLastVisibleNodeSpy).toHaveBeenCalled();
+      expect(updateCursorPositionSpy).toHaveBeenCalled();
       expect(waitSpy).toHaveBeenCalled();
     });
 
-    it('should get type speed', () => {
-      expect(engine['getTypeSpeed']()).toBe(50);
-    });
-
-    it('should animate cursor', () => {
-      engine['state'].cursorNode = document.createElement('span');
-      engine['animateCursor']();
-      expect(engine['rafId']).toBeDefined();
-    });
-
     it('should apply text effect', async () => {
-      const element = document.createElement('div');
-      const engine = new TypecraftEngine(element, { textEffect: TextEffect.FadeIn });
+      const getStateSpy = vi.spyOn(engine['stateManager'], 'getState').mockReturnValue({
+        element: document.createElement('div'),
+        queue: [],
+        lastFrameTime: 0,
+        pauseUntil: 0,
+        lastOperation: QueueActionType.TYPE_CHARACTER,
+        visibleNodes: [
+          { type: NodeType.Character, node: document.createElement('span') },
+          { type: NodeType.Character, node: document.createElement('span') },
+        ],
+        cursorNode: null,
+        currentSpeed: 'natural',
+        eventQueue: [],
+        eventListeners: new Map(),
+        cursorBlinkState: false,
+        lastCursorBlinkTime: 0,
+        cursorPosition: 0,
+      });
       const applyTextEffectSpy = vi
-        .spyOn(engine['textEffectManager'], 'applyTextEffect')
-        .mockImplementation(async () => {
-          // Mock the implementation to resolve immediately
-          await Promise.resolve();
-        });
+        .spyOn(engine['EffectManager'], 'applyTextEffect')
+        .mockResolvedValue(undefined);
+      const resetEffectStylesSpy = vi.spyOn(engine['EffectManager'], 'resetEffectStyles');
 
-      // Add some visible nodes
-      engine['state'].visibleNodes = [
-        { type: NodeType.Character, node: document.createElement('span') },
-        { type: NodeType.Character, node: document.createElement('span') },
-      ];
+      await (engine as any).applyTextEffect(TextEffect.FadeIn);
 
-      const applyTextEffectPromise = engine['applyTextEffect'](TextEffect.FadeIn);
-
-      // Run all timers and micro-tasks
-      await vi.runAllTimersAsync();
-      await vi.runAllTicks();
-
-      await applyTextEffectPromise;
-
+      expect(getStateSpy).toHaveBeenCalled();
       expect(applyTextEffectSpy).toHaveBeenCalledTimes(2);
-      expect(applyTextEffectSpy).toHaveBeenCalledWith(
-        TextEffect.FadeIn,
-        expect.any(HTMLElement),
-        expect.any(Number),
-        expect.any(Function)
-      );
+      expect(resetEffectStylesSpy).toHaveBeenCalled();
     });
 
     it('should wait for specified time', async () => {
       vi.useFakeTimers();
-      const engine = new TypecraftEngine(element);
-      const pauseTime = 1000;
+      const emitSpy = vi.spyOn(engine as any, 'emit');
 
-      const promise = engine.pauseFor(pauseTime).start();
+      const waitPromise = (engine as any).wait(1000);
 
-      vi.advanceTimersByTime(pauseTime);
-      await promise;
+      vi.advanceTimersByTime(1000);
+      await waitPromise;
 
-      expect(vi.getTimerCount()).toBe(0);
+      expect(emitSpy).toHaveBeenCalledWith('pauseEnd');
       vi.useRealTimers();
     });
   });

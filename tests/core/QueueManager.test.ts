@@ -11,56 +11,24 @@ describe('QueueManager', () => {
     sampleQueueItem = { type: QueueActionType.TYPE_CHARACTER, payload: { char: 'a' } };
   });
 
-  it('should initialize with an empty queue', () => {
-    expect(queueManager.isEmpty()).toBe(true);
-    expect(queueManager.getLength()).toBe(0);
-  });
-
   it('should add an item to the queue', () => {
     queueManager.add(sampleQueueItem);
-    expect(queueManager.isEmpty()).toBe(false);
-    expect(queueManager.getLength()).toBe(1);
+    expect(queueManager.getNext()).toEqual(sampleQueueItem);
   });
 
   it('should return and remove the next item from the queue', () => {
     queueManager.add(sampleQueueItem);
     const nextItem = queueManager.getNext();
     expect(nextItem).toEqual(sampleQueueItem);
-    expect(queueManager.isEmpty()).toBe(true);
-    expect(queueManager.getLength()).toBe(0);
-  });
-
-  it('should return undefined when getting next item from an empty queue', () => {
-    const nextItem = queueManager.getNext();
-    expect(nextItem).toBeUndefined();
+    expect(queueManager.getNext()).toBeUndefined();
   });
 
   it('should clear all items from the queue', () => {
     queueManager.add(sampleQueueItem);
     queueManager.add(sampleQueueItem);
-    expect(queueManager.getLength()).toBe(2);
 
     queueManager.clear();
-    expect(queueManager.isEmpty()).toBe(true);
-    expect(queueManager.getLength()).toBe(0);
-  });
-
-  it('should correctly report if the queue is empty', () => {
-    expect(queueManager.isEmpty()).toBe(true);
-    queueManager.add(sampleQueueItem);
-    expect(queueManager.isEmpty()).toBe(false);
-    queueManager.getNext();
-    expect(queueManager.isEmpty()).toBe(true);
-  });
-
-  it('should correctly report the length of the queue', () => {
-    expect(queueManager.getLength()).toBe(0);
-    queueManager.add(sampleQueueItem);
-    expect(queueManager.getLength()).toBe(1);
-    queueManager.add(sampleQueueItem);
-    expect(queueManager.getLength()).toBe(2);
-    queueManager.getNext();
-    expect(queueManager.getLength()).toBe(1);
+    expect(queueManager.getNext()).toBeUndefined();
   });
 
   it('should maintain correct order of items in the queue', () => {
@@ -75,5 +43,6 @@ describe('QueueManager', () => {
     expect(queueManager.getNext()).toEqual(item1);
     expect(queueManager.getNext()).toEqual(item2);
     expect(queueManager.getNext()).toEqual(item3);
+    expect(queueManager.getNext()).toBeUndefined();
   });
 });

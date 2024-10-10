@@ -53,7 +53,7 @@ export function useTypecraft({
   onComplete,
 }: UseTypecraftProps = {}) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
-  const TypecraftRef = useRef<TypecraftEngine | null>(null);
+  const typecraftRef = useRef<TypecraftEngine | null>(null);
 
   const mergedOptions = {
     ...defaultOptions,
@@ -65,9 +65,9 @@ export function useTypecraft({
   };
 
   useEffect(() => {
-    if (element && !TypecraftRef.current) {
+    if (element && !typecraftRef.current) {
       const instance = new TypecraftEngine(element, mergedOptions);
-      TypecraftRef.current = instance;
+      typecraftRef.current = instance;
 
       if (onInit) {
         onInit(instance);
@@ -107,38 +107,38 @@ export function useTypecraft({
     }
 
     return () => {
-      if (TypecraftRef.current) {
-        TypecraftRef.current.stop();
-        // Remove event listeners
+      if (typecraftRef.current) {
+        typecraftRef.current.stop();
+
         if (onTypeStart) {
-          TypecraftRef.current.off('typeStart', onTypeStart);
+          typecraftRef.current.off('typeStart', onTypeStart);
         }
         if (onTypeChar) {
-          TypecraftRef.current.off('typeChar', onTypeChar);
+          typecraftRef.current.off('typeChar', onTypeChar);
         }
         if (onTypeComplete) {
-          TypecraftRef.current.off('typeComplete', onTypeComplete);
+          typecraftRef.current.off('typeComplete', onTypeComplete);
         }
         if (onDeleteStart) {
-          TypecraftRef.current.off('deleteStart', onDeleteStart);
+          typecraftRef.current.off('deleteStart', onDeleteStart);
         }
         if (onDeleteChar) {
-          TypecraftRef.current.off('deleteChar', onDeleteChar);
+          typecraftRef.current.off('deleteChar', onDeleteChar);
         }
         if (onDeleteComplete) {
-          TypecraftRef.current.off('deleteComplete', onDeleteComplete);
+          typecraftRef.current.off('deleteComplete', onDeleteComplete);
         }
         if (onDeleteSkipped) {
-          TypecraftRef.current.off('deleteSkipped', onDeleteSkipped);
+          typecraftRef.current.off('deleteSkipped', onDeleteSkipped);
         }
         if (onPauseStart) {
-          TypecraftRef.current.off('pauseStart', onPauseStart);
+          typecraftRef.current.off('pauseStart', onPauseStart);
         }
         if (onPauseEnd) {
-          TypecraftRef.current.off('pauseEnd', onPauseEnd);
+          typecraftRef.current.off('pauseEnd', onPauseEnd);
         }
         if (onComplete) {
-          TypecraftRef.current.off('complete', onComplete);
+          typecraftRef.current.off('complete', onComplete);
         }
       }
     };
@@ -158,9 +158,15 @@ export function useTypecraft({
     onComplete,
   ]);
 
+  // useEffect(() => {
+  //   if (typecraftRef.current) {
+  //     typecraftRef.current.changeSettings(mergedOptions);
+  //   }
+  // }, [mergedOptions]);
+
   return {
     setElement,
-    typecraft: TypecraftRef.current,
+    typecraft: typecraftRef.current,
     cursorStyle: mergedOptions.cursor.style,
   };
 }
