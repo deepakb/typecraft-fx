@@ -90,6 +90,9 @@ export enum QueueActionType {
   DELETE_CHARACTER = 'deleteCharacter',
   CALL_FUNCTION = 'callFunction',
   TYPE_CHARACTER = 'typeCharacter',
+  TYPE_HTML_TAG_OPEN = 'typeHtmlTagOpen',
+  TYPE_HTML_TAG_CLOSE = 'typeHtmlTagClose',
+  TYPE_HTML_CONTENT = 'typeHtmlContent',
 }
 
 export interface QueueItem {

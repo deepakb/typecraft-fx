@@ -120,6 +120,15 @@ export class TypecraftEngine {
       case QueueActionType.TYPE_CHARACTER:
         await this.typeCharacter(payload);
         break;
+      case QueueActionType.TYPE_HTML_TAG_OPEN:
+        await this.typeHtmlTagOpen(payload);
+        break;
+      case QueueActionType.TYPE_HTML_CONTENT:
+        await this.typeHtmlContent(payload.content);
+        break;
+      case QueueActionType.TYPE_HTML_TAG_CLOSE:
+        await this.typeHtmlTagClose(payload);
+        break;
       case QueueActionType.DELETE:
       case QueueActionType.DELETE_CHARACTER:
         const state = this.stateManager.getState();
@@ -146,6 +155,42 @@ export class TypecraftEngine {
     }
 
     await this.runQueue();
+  }
+
+  private async typeHtmlTagOpen(payload: {
+    tagName: string;
+    attributes: NamedNodeMap;
+  }): Promise<void> {
+    const { tagName, attributes } = payload;
+    const element = document.createElement(tagName);
+    for (let i = 0; i < attributes.length; i++) {
+      const attr = attributes[i];
+      element.setAttribute(attr.name, attr.value);
+    }
+    const state = this.stateManager.getState();
+    state.element.insertBefore(element, this.cursorManager.getCursorElement());
+    this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: element });
+    this.cursorManager.updateCursorPosition(state.element);
+    await this.wait(this.getTypeSpeed());
+  }
+
+  private async typeHtmlTagClose(payload: { tagName: string }): Promise<void> {
+    const state = this.stateManager.getState();
+    const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+    if (
+      lastNode &&
+      lastNode.type === NodeType.HTMLElement &&
+      (lastNode.node as HTMLElement).tagName.toLowerCase() === payload.tagName.toLowerCase()
+    ) {
+      // Move to the next sibling of the closing tag
+      const nextSibling = lastNode.node.nextSibling;
+      if (nextSibling instanceof HTMLElement) {
+        this.cursorManager.updateCursorPosition(nextSibling);
+      } else {
+        this.cursorManager.updateCursorPosition(state.element);
+      }
+    }
+    await this.wait(this.getTypeSpeed());
   }
 
   private checkOperationComplete(): void {
@@ -197,11 +242,18 @@ export class TypecraftEngine {
 
   private async typeCharacter(payload: { char: string }): Promise<void> {
     const { char } = payload;
-    const charSpan = document.createElement('span');
-    charSpan.textContent = char;
     const state = this.stateManager.getState();
-    state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
-    this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: charSpan });
+    const currentNode = state.visibleNodes[state.visibleNodes.length - 1];
+
+    if (currentNode && currentNode.type === NodeType.HTMLElement) {
+      await this.typeHtmlContent(char);
+    } else {
+      const charSpan = document.createElement('span');
+      charSpan.textContent = char;
+      state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
+      this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: charSpan });
+    }
+
     this.cursorManager.updateCursorPosition(state.element);
 
     const typeSpeed =
@@ -210,6 +262,26 @@ export class TypecraftEngine {
 
     await this.applyTextEffect(this.options.textEffect);
     this.emit('typeChar', { char });
+  }
+
+  private async typeHtmlContent(content: string): Promise<void> {
+    const state = this.stateManager.getState();
+    const currentNode = state.visibleNodes[state.visibleNodes.length - 1];
+
+    if (currentNode && currentNode.type === NodeType.HTMLElement) {
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        const textNode = document.createTextNode(char);
+        (currentNode.node as HTMLElement).appendChild(textNode);
+        this.stateManager.updateVisibleNodes({
+          type: NodeType.Character,
+          node: textNode.parentElement as HTMLElement,
+        });
+        this.cursorManager.updateCursorPosition(state.element);
+        await this.wait(this.getTypeSpeed());
+        this.emit('typeChar', { char });
+      }
+    }
   }
 
   private async deleteCharacter(): Promise<void> {
@@ -360,7 +432,7 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
 
     this.options.strings.forEach((string, index) => {
-      this.stringManager.typeString(string);
+      this.stringManager.typeString(string, this.options.html);
 
       if (index !== this.options.strings.length - 1) {
         this.pauseFor(this.options.pauseFor);
