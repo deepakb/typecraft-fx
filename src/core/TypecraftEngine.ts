@@ -20,7 +20,6 @@ import { EasingManager } from './EasingManager';
 
 export class TypecraftEngine {
   private options: TypecraftOptions;
-  private rafId: number | null = null;
   private cursorManager: CursorManager;
   private queueManager: QueueManager;
   private EffectManager: EffectManager;
@@ -29,6 +28,8 @@ export class TypecraftEngine {
   private stringManager: StringManager;
   private speedManager: SpeedManager;
   private easingManager: EasingManager;
+  private rafId: number | null = null;
+  private lastFrameTime: number = 0;
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
     this.optionsManager = new OptionsManager();
@@ -54,9 +55,38 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
     state.element.style.direction = this.options.direction;
 
+    if (this.options.cursor.blink) {
+      this.cursorManager.startBlinking();
+    }
+
     if (this.options.autoStart && this.options.strings.length) {
       this.typeAllStrings();
     }
+
+    this.startAnimationLoop();
+  }
+
+  private startAnimationLoop(): void {
+    const animate = (currentTime: number) => {
+      if (this.lastFrameTime === 0) {
+        this.lastFrameTime = currentTime;
+      }
+
+      const deltaTime = currentTime - this.lastFrameTime;
+      this.update(deltaTime, currentTime);
+
+      this.lastFrameTime = currentTime;
+      this.rafId = requestAnimationFrame(animate);
+    };
+
+    this.rafId = requestAnimationFrame(animate);
+  }
+
+  private update(deltaTime: number, currentTime: number): void {
+    // Update cursor blink
+    this.cursorManager.updateBlink(currentTime);
+
+    // Other update logic can be added here
   }
 
   private getTypeSpeed(): number {
@@ -65,7 +95,10 @@ export class TypecraftEngine {
 
   private setupCursor(): void {
     const state = this.stateManager.getState();
-    this.cursorManager = new CursorManager(state.element, this.options.cursor);
+    this.cursorManager = new CursorManager(state.element, {
+      ...this.options.cursor,
+      blink: this.options.cursor.blink || false,
+    });
   }
 
   private updateCursorStyle(): void {
@@ -245,10 +278,11 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
 
     if (char === '\n') {
-      state.element.appendChild(document.createElement('br'));
+      const brElement = document.createElement('br');
+      state.element.appendChild(brElement);
       this.stateManager.updateVisibleNodes({
         type: NodeType.HTMLElement,
-        node: state.element.lastElementChild as HTMLElement,
+        node: brElement,
       });
     } else if (char === '\t') {
       const tabSpan = document.createElement('span');
@@ -256,10 +290,16 @@ export class TypecraftEngine {
       state.element.appendChild(tabSpan);
       this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: tabSpan });
     } else {
-      const charSpan = document.createElement('span');
-      charSpan.textContent = char;
-      state.element.appendChild(charSpan);
-      this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: charSpan });
+      let lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+      if (!lastNode || lastNode.type !== NodeType.Character) {
+        const span = document.createElement('span');
+        state.element.appendChild(span);
+        lastNode = { type: NodeType.Character, node: span };
+        this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
+      }
+      if (lastNode.node instanceof HTMLElement) {
+        (lastNode.node as HTMLElement).textContent += char;
+      }
     }
 
     this.cursorManager.updateCursorPosition(state.element);
@@ -296,9 +336,18 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
     if (state.visibleNodes.length > 0) {
       const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
-      this.stateManager.removeLastVisibleNode();
-      if (lastNode && lastNode.node.parentNode) {
-        lastNode.node.parentNode.removeChild(lastNode.node);
+      if (lastNode.type === NodeType.Character) {
+        const span = lastNode.node as HTMLElement;
+        const text = span.textContent || '';
+        if (text.length > 1) {
+          span.textContent = text.slice(0, -1);
+        } else {
+          this.stateManager.removeLastVisibleNode();
+          span.parentNode?.removeChild(span);
+        }
+      } else {
+        this.stateManager.removeLastVisibleNode();
+        lastNode.node.parentNode?.removeChild(lastNode.node);
       }
       this.cursorManager.updateCursorPosition(state.element);
       const deleteSpeed =
@@ -416,6 +465,7 @@ export class TypecraftEngine {
   public stop(): void {
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
     this.queueManager.clear();
   }

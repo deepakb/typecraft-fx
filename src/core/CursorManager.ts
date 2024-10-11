@@ -51,6 +51,21 @@ export class CursorManager {
     }
   }
 
+  public updateBlink(currentTime: number): void {
+    if (!this.options.blink) {
+      return;
+    }
+
+    const delta = currentTime - this.lastBlinkTime;
+    if (delta >= this.options.blinkSpeed) {
+      this.cursorBlinkState = !this.cursorBlinkState;
+      this.cursorNode.style.opacity = this.cursorBlinkState
+        ? this.options.opacity.max.toString()
+        : this.options.opacity.min.toString();
+      this.lastBlinkTime = currentTime;
+    }
+  }
+
   public remove(): void {
     this.stopBlinking();
     if (this.cursorNode.parentNode) {

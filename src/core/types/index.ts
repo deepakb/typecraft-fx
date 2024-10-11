@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 export interface CursorOptions {
   text: string;
   color: string;

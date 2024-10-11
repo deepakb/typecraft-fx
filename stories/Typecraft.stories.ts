@@ -292,7 +292,7 @@ export const MultilineText: Story = {
 
 export const EmojisAndSpecialCharacters: Story = {
   args: {
-    strings: ['Emojis 😊🎉🚀', 'Special characters: àáâãäå', 'Symbols: ©®™℠'],
+    strings: ['Emojis 😊🎉🚀', '\nSpecial characters: àáâãäå', '\nSymbols: ©®™℠'],
     speed: { type: 50, delete: 50, delay: 1000 },
     autoStart: true,
   },
