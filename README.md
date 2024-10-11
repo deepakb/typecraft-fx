@@ -49,16 +49,16 @@ import { Typecraft } from 'typecraft-fx';
 ### Lazy Loading (larger initial bundle, but with code splitting)
 
 ```jsx
-import { TypecraftComponent } from 'typecraft-fx';
+import { TypecraftFX } from 'typecraft-fx';
 ```
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent } from 'typecraft-fx';
+import { TypecraftFX } from 'typecraft-fx';
 
 const MyComponent = () => {
   return (
-    <TypecraftComponent
+    <TypecraftFX
       onInit={(typecraft) => {
         typecraft
           .typeString('Hello World!')
@@ -78,11 +78,11 @@ export default MyComponent;
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent, TextEffect, CursorStyle } from 'typecraft-fx';
+import { TypecraftFX, TextEffect, CursorStyle } from 'typecraft-fx';
 
 const AdvancedComponent = () => {
   return (
-    <TypecraftComponent
+    <TypecraftFX
       options={{
         strings: ['First sentence.', 'Second sentence.'],
         autoStart: true,
@@ -146,7 +146,7 @@ If you're not using React, you can still use TypecraftFX with vanilla JavaScript
 
 ## API Reference
 
-### TypecraftComponent Props
+### TypecraftFX Props
 
 | Prop               | Type                             | Description                                             |
 | ------------------ | -------------------------------- | ------------------------------------------------------- |

@@ -13,13 +13,26 @@ export class StringManager {
       const nodes = this.parseHTML(string);
       this.typeNodes(nodes);
     } else {
-      for (let i = 0; i < string.length; i++) {
+      const characters = this.parseSpecialCharacters(string);
+      for (const char of characters) {
         this.queueManager.add({
           type: QueueActionType.TYPE_CHARACTER,
-          payload: { char: string[i] },
+          payload: { char },
         });
       }
     }
+  }
+
+  private parseSpecialCharacters(string: string): string[] {
+    return string.split('').map((char) => {
+      if (char === '\n') {
+        return '\n';
+      }
+      if (char === '\t') {
+        return '\t';
+      }
+      return char;
+    });
   }
 
   private parseHTML(html: string): Node[] {

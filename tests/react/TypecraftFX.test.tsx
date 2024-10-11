@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react';
-import { TypecraftComponent } from '../../src/react/TypecraftComponent';
+import { TypecraftFX } from '../../src/react/TypecraftFX';
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
 import { TypecraftOptions, Direction, CursorStyle, TextEffect } from '../../src/core/types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -7,7 +7,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 // Mock the TypecraftEngine
 vi.mock('../../src/core/TypecraftEngine');
 
-describe('TypecraftComponent', () => {
+describe('TypecraftFX', () => {
   let mockTypecraft: {
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
@@ -46,7 +46,7 @@ describe('TypecraftComponent', () => {
       html: false,
       textEffect: TextEffect.None,
     };
-    const { container } = render(<TypecraftComponent {...options} />);
+    const { container } = render(<TypecraftFX {...options} />);
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -71,7 +71,7 @@ describe('TypecraftComponent', () => {
       textEffect: TextEffect.None,
     };
 
-    render(<TypecraftComponent {...options} />);
+    render(<TypecraftFX {...options} />);
 
     expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), options);
     expect(mockTypecraft.start).toHaveBeenCalled();
@@ -99,7 +99,7 @@ describe('TypecraftComponent', () => {
     };
 
     const { container } = render(
-      <TypecraftComponent {...options} className="custom-class" style={{ color: 'red' }} />
+      <TypecraftFX {...options} className="custom-class" style={{ color: 'red' }} />
     );
 
     const element = container.firstChild as HTMLElement;
@@ -128,7 +128,7 @@ describe('TypecraftComponent', () => {
       textEffect: TextEffect.None,
     };
 
-    const { unmount } = render(<TypecraftComponent {...options} />);
+    const { unmount } = render(<TypecraftFX {...options} />);
 
     unmount();
 

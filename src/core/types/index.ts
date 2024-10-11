@@ -120,6 +120,8 @@ export enum NodeType {
   Character = 'character',
   HTMLTag = 'htmlTag',
   HTMLElement = 'htmlElement',
+  LineBreak = 'lineBreak',
+  Tab = 'tab',
 }
 
 export enum Direction {

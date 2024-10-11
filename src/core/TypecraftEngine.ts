@@ -243,14 +243,22 @@ export class TypecraftEngine {
   private async typeCharacter(payload: { char: string }): Promise<void> {
     const { char } = payload;
     const state = this.stateManager.getState();
-    const currentNode = state.visibleNodes[state.visibleNodes.length - 1];
 
-    if (currentNode && currentNode.type === NodeType.HTMLElement) {
-      await this.typeHtmlContent(char);
+    if (char === '\n') {
+      state.element.appendChild(document.createElement('br'));
+      this.stateManager.updateVisibleNodes({
+        type: NodeType.HTMLElement,
+        node: state.element.lastElementChild as HTMLElement,
+      });
+    } else if (char === '\t') {
+      const tabSpan = document.createElement('span');
+      tabSpan.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
+      state.element.appendChild(tabSpan);
+      this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: tabSpan });
     } else {
       const charSpan = document.createElement('span');
       charSpan.textContent = char;
-      state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
+      state.element.appendChild(charSpan);
       this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: charSpan });
     }
 

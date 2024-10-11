@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
-import { useTypecraft } from '../../src/react/useTypecraft';
+import { useTypecraftFX } from '../../src/react/useTypecraftFX';
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
 import { vi, expect, it, describe, beforeEach } from 'vitest';
 
@@ -8,11 +8,11 @@ vi.mock('../../src/core/TypecraftEngine');
 
 // Test component that uses the hook
 const TestComponent: React.FC<any> = (props) => {
-  const { setElement } = useTypecraft(props);
+  const { setElement } = useTypecraftFX(props);
   return <div ref={setElement} />;
 };
 
-describe('useTypecraft', () => {
+describe('useTypecraftFX', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

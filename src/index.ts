@@ -1,5 +1,6 @@
 export { TypecraftEngine } from './core/TypecraftEngine';
-export { TypecraftComponentWithSuspense as TypecraftComponent } from './react/TypecraftComponentLazy';
+export { TypecraftFX } from './react/TypecraftFX';
+export { TypecraftFXLazy } from './react/TypecraftFXLazy';
 export { Direction, CursorStyle, TextEffect } from './core/types';
 export type { TypecraftOptions } from './core/types';
-export { useTypecraft } from './react/useTypecraft';
+export { useTypecraftFX } from './react/useTypecraftFX';

@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
 import { TypecraftOptions, EventCallback, CursorStyle, Direction, TextEffect } from '../core/types';
 
-export interface UseTypecraftProps {
+export interface UseTypecraftFXProps {
   options?: Partial<TypecraftOptions>;
-  /* eslint-disable-next-line no-unused-vars */
   onInit?: (typecraft: TypecraftEngine) => void;
   onTypeStart?: EventCallback;
   onTypeChar?: EventCallback;
@@ -38,7 +37,7 @@ const defaultOptions: TypecraftOptions = {
   html: false,
 };
 
-export function useTypecraft({
+export function useTypecraftFX({
   options,
   onInit,
   onTypeStart,
@@ -51,7 +50,7 @@ export function useTypecraft({
   onPauseStart,
   onPauseEnd,
   onComplete,
-}: UseTypecraftProps = {}) {
+}: UseTypecraftFXProps = {}) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const typecraftRef = useRef<TypecraftEngine | null>(null);
 
@@ -157,12 +156,6 @@ export function useTypecraft({
     onPauseEnd,
     onComplete,
   ]);
-
-  // useEffect(() => {
-  //   if (typecraftRef.current) {
-  //     typecraftRef.current.changeSettings(mergedOptions);
-  //   }
-  // }, [mergedOptions]);
 
   return {
     setElement,

@@ -27,9 +27,10 @@ export class CursorManager {
   }
 
   public updateCursorPosition(element: HTMLElement): void {
-    const rect = element.getBoundingClientRect();
-    this.cursorNode.style.left = `${rect.right}px`;
-    this.cursorNode.style.top = `${rect.top}px`;
+    if (this.cursorNode.parentNode) {
+      this.cursorNode.parentNode.removeChild(this.cursorNode);
+    }
+    element.appendChild(this.cursorNode);
   }
 
   public changeCursorStyle(style: CursorStyle): void {

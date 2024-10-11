@@ -1,9 +1,10 @@
 import { Meta, StoryObj } from '@storybook/react';
-import { TypecraftComponent, Direction, CursorStyle, TextEffect } from '../src';
+import { TypecraftFX, Direction, CursorStyle, TextEffect } from '../src';
+export { default as Documentation } from './Typecraft.mdx';
 
-const meta: Meta<typeof TypecraftComponent> = {
-  title: 'TypecraftEngine',
-  component: TypecraftComponent,
+const meta: Meta<typeof TypecraftFX> = {
+  title: 'TypecraftFX',
+  component: TypecraftFX,
   argTypes: {
     strings: { control: 'object' },
     speed: {
@@ -25,11 +26,11 @@ const meta: Meta<typeof TypecraftComponent> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof TypecraftComponent>;
+type Story = StoryObj<typeof TypecraftFX>;
 
 export const BasicUsage: Story = {
   args: {
-    strings: ['Welcome to TypecraftFX', 'A powerful typing animation library'],
+    strings: ['Welcome to TypecraftFX', ' A powerful typing animation library'],
     speed: { type: 50, delete: 50, delay: 1000 },
     loop: false,
     autoStart: true,
@@ -218,38 +219,38 @@ export const CustomCursorOpacity: Story = {
 
 export const ComplexChaining: Story = {
   args: {
-    onInit: (typecraft) => {
-      typecraft
-        .typeString('Welcome to TypecraftFX!')
-        .pauseFor(1000)
-        .deleteAll()
-        .typeString("Let's explore some features:")
-        .pauseFor(500)
-        .typeString('\n1. Dynamic text effects')
-        .pauseFor(500)
-        .typeString('\n2. Multiple cursor styles')
-        .pauseFor(500)
-        .typeString('\n3. Customizable cursor')
-        .pauseFor(500)
-        .typeString('\n4. RTL support')
-        .pauseFor(500)
-        .deleteAll()
-        .typeString('Enjoy using TypecraftFX!')
-        .start();
-    },
+    strings: [
+      'Welcome to TypecraftFX!\n',
+      "Let's explore some features:",
+      '\t1. Dynamic text effects',
+      '\t2. Multiple cursor styles',
+      '\t3. Customizable cursor',
+      '\t4. RTL support',
+      '\t\tEnjoy using TypecraftFX!',
+    ],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    pauseFor: 500,
+    loop: false,
   },
 };
 
 export const DynamicSpeedChange: Story = {
   args: {
-    onInit: (typecraft) => {
-      typecraft
-        .typeString('This is typed at normal speed. ')
-        .changeTypeSpeed(10)
-        .typeString('This is typed very fast! ')
-        .changeTypeSpeed(200)
-        .typeString('This is typed very slowly.')
-        .start();
+    strings: [
+      'This is typed at normal speed. ',
+      'This is typed very fast! ',
+      'This is typed very slowly.',
+    ],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    onInit: (instance) => {
+      // We can't directly control the typing speed for each string,
+      // but we can log when each string starts typing
+      instance.on('typeStart', (currentString: string) => {
+        console.log(`Started typing: ${currentString}`);
+        // Here you could potentially update some state or perform other actions
+      });
     },
   },
 };
@@ -269,14 +270,14 @@ export const MixedHTMLAndPlainText: Story = {
 
 export const CallbackFunctions: Story = {
   args: {
-    onInit: (typecraft) => {
-      typecraft
-        .typeString('This string has a callback at the end.')
-        .callFunction(() => {
-          console.log('Typing completed!');
-          alert('Typing completed!');
-        })
-        .start();
+    strings: ['This string has a callback at the end.'],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    onInit: (instance) => {
+      instance.on('complete', () => {
+        console.log('Typing completed!');
+        alert('Typing completed!');
+      });
     },
   },
 };
@@ -296,5 +297,3 @@ export const EmojisAndSpecialCharacters: Story = {
     autoStart: true,
   },
 };
-
-// The Documentation component will be added here later

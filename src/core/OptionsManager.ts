@@ -25,12 +25,12 @@ export class OptionsManager {
         blinkSpeed: 500,
         opacity: { min: 0, max: 1 },
         style: CursorStyle.Solid,
-        blink: false,
+        blink: true,
       },
       direction: Direction.LTR,
       textEffect: TextEffect.None,
       easingFunction: (t) => t,
-      html: false,
+      html: true,
     };
 
     return {
