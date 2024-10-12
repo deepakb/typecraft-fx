@@ -35,7 +35,7 @@ export interface TypecraftClass {
   deleteAll(speed?: number): TypecraftClass;
   deleteChars(amount: number): TypecraftClass;
   pauseFor(ms: number): TypecraftClass;
-  changeDeleteSpeed(speed: number): TypecraftClass;
+  setSpeed(speed: number): TypecraftClass;
 
   // Options methods
   changeSettings(options: Partial<TypecraftOptions>): TypecraftClass;
@@ -93,7 +93,7 @@ export enum QueueActionType {
   CHANGE_DIRECTION = 'changeDirection',
   CHANGE_CURSOR = 'changeCursor',
   CHANGE_CURSOR_STYLE = 'changeCursorStyle',
-  CHANGE_TEXT_EFFECT = 'changeTextEffect',
+  CHANGE_TEXT_EFFECT = 'setTextEffect',
   DELETE_CHARACTER = 'deleteCharacter',
   CALL_FUNCTION = 'callFunction',
   TYPE_CHARACTER = 'typeCharacter',

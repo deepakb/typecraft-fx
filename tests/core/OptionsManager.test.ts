@@ -6,67 +6,40 @@ describe('OptionsManager', () => {
   let optionsManager: OptionsManager;
 
   beforeEach(() => {
-    optionsManager = new OptionsManager();
+    document.body.innerHTML = '<div id="test-element"></div>';
   });
 
-  describe('initializeOptions', () => {
+  describe('constructor and getOptions', () => {
     it('should initialize options with a valid string selector', () => {
-      document.body.innerHTML = '<div id="test-element"></div>';
       const options: Partial<TypecraftOptions> = { strings: ['Test'] };
-      const result = optionsManager.initializeOptions('#test-element', options);
+      optionsManager = new OptionsManager('#test-element', options);
+      const result = optionsManager.getOptions();
       expect(result).toEqual(expect.objectContaining(options));
     });
 
     it('should initialize options with a valid HTMLElement', () => {
       const element = document.createElement('div');
       const options: Partial<TypecraftOptions> = { strings: ['Test'] };
-      const result = optionsManager.initializeOptions(element, options);
+      optionsManager = new OptionsManager(element, options);
+      const result = optionsManager.getOptions();
       expect(result).toEqual(expect.objectContaining(options));
     });
 
     it('should throw an error for invalid string selector', () => {
       expect(() => {
-        optionsManager.initializeOptions('#non-existent', {});
+        new OptionsManager('#non-existent', {});
       }).toThrow('Element with selector "#non-existent" not found');
     });
 
     it('should throw an error for invalid element', () => {
       expect(() => {
-        optionsManager.initializeOptions({} as HTMLElement, {});
+        new OptionsManager({} as HTMLElement, {});
       }).toThrow('Invalid HTML element provided');
     });
   });
 
-  describe('validateElement', () => {
-    it('should not throw an error for valid string selector', () => {
-      document.body.innerHTML = '<div id="test-element"></div>';
-      expect(() => {
-        optionsManager.validateElement('#test-element');
-      }).not.toThrow();
-    });
-
-    it('should not throw an error for valid HTMLElement', () => {
-      const element = document.createElement('div');
-      expect(() => {
-        optionsManager.validateElement(element);
-      }).not.toThrow();
-    });
-
-    it('should throw an error for invalid string selector', () => {
-      expect(() => {
-        optionsManager.validateElement('#non-existent');
-      }).toThrow('Element with selector "#non-existent" not found');
-    });
-
-    it('should throw an error for invalid element', () => {
-      expect(() => {
-        optionsManager.validateElement({} as HTMLElement);
-      }).toThrow('Invalid HTML element provided');
-    });
-  });
-
-  describe('mergeOptions', () => {
-    it('should merge options with default options', () => {
+  describe('getOptions', () => {
+    it('should return merged options', () => {
       const customOptions: Partial<TypecraftOptions> = {
         strings: ['Test'],
         speed: 100,
@@ -80,11 +53,36 @@ describe('OptionsManager', () => {
           blink: true,
         },
       };
-      const result = optionsManager.mergeOptions(customOptions);
+      optionsManager = new OptionsManager('#test-element', customOptions);
+      const result = optionsManager.getOptions();
       expect(result).toEqual(expect.objectContaining(customOptions));
       expect(result.cursor).toEqual(expect.objectContaining(customOptions.cursor));
     });
 
-    // Add more tests for mergeOptions as needed
+    it('should include default options for unspecified properties', () => {
+      optionsManager = new OptionsManager('#test-element', {});
+      const result = optionsManager.getOptions();
+      expect(result).toEqual(
+        expect.objectContaining({
+          strings: [],
+          speed: 50,
+          pauseFor: 1500,
+          loop: false,
+          autoStart: false,
+          direction: Direction.LTR,
+          textEffect: TextEffect.None,
+          easingFunction: expect.any(Function),
+          html: true,
+          cursor: expect.objectContaining({
+            text: '|',
+            color: 'black',
+            blinkSpeed: 500,
+            opacity: { min: 0, max: 1 },
+            style: CursorStyle.Solid,
+            blink: true,
+          }),
+        })
+      );
+    });
   });
 });

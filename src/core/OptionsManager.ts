@@ -1,16 +1,18 @@
 import { TypecraftOptions, CursorStyle, Direction, TextEffect } from './types';
 
 export class OptionsManager {
-  public initializeOptions(
-    element: string | HTMLElement,
-    options: Partial<TypecraftOptions>
-  ): TypecraftOptions {
+  private options: TypecraftOptions;
+
+  constructor(element: string | HTMLElement, options: Partial<TypecraftOptions>) {
     this.validateElement(element);
-    const mergedOptions = this.mergeOptions(options);
-    return mergedOptions;
+    this.options = this.initializeOptions(options);
   }
 
-  public validateElement(element: string | HTMLElement): void {
+  public getOptions(): TypecraftOptions {
+    return this.options;
+  }
+
+  private validateElement(element: string | HTMLElement): void {
     if (typeof element === 'string') {
       const el = document.querySelector(element);
       if (!el) {
@@ -21,7 +23,7 @@ export class OptionsManager {
     }
   }
 
-  public mergeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
+  private initializeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
     const defaultOptions: TypecraftOptions = {
       strings: [],
       speed: 50,

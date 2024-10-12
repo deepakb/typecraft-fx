@@ -9,6 +9,8 @@ import {
   HTMLParseNode,
   EasingFunction,
   CustomEffectFunction,
+  CursorOptions,
+  SpeedOptions,
 } from './types';
 import { CursorManager } from './CursorManager';
 import { QueueManager } from './QueueManager';
@@ -33,9 +35,9 @@ export class TypecraftEngine {
   private lastFrameTime: number = 0;
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
-    this.optionsManager = new OptionsManager();
-    this.options = this.optionsManager.initializeOptions(element, options);
     const htmlElement = typeof element === 'string' ? document.querySelector(element)! : element;
+    this.optionsManager = new OptionsManager(htmlElement as HTMLElement, options);
+    this.options = this.optionsManager.getOptions();
     this.stateManager = new StateManager(htmlElement as HTMLElement, this.options);
     this.cursorManager = new CursorManager(htmlElement as HTMLElement, this.options.cursor);
     this.cursorManager.updateCursorPosition(htmlElement as HTMLElement);
@@ -180,6 +182,9 @@ export class TypecraftEngine {
         break;
       case QueueActionType.CALLBACK:
       case QueueActionType.CALL_FUNCTION:
+        if (typeof payload.callback === 'function') {
+          await Promise.resolve(payload.callback());
+        }
         await Promise.resolve(payload.callback());
         break;
       case QueueActionType.LOOP:
@@ -277,17 +282,13 @@ export class TypecraftEngine {
     return nodes;
   }
 
-  private async typeCharacter(payload: { char: string; color?: string }): Promise<void> {
-    const { char, color } = payload;
+  private async typeCharacter({ char, color }: { char: string; color?: string }): Promise<void> {
     const state = this.stateManager.getState();
 
     if (char === '\n') {
-      const brElement = document.createElement('br');
-      state.element.appendChild(brElement);
-      this.stateManager.updateVisibleNodes({
-        type: NodeType.HTMLElement,
-        node: brElement,
-      });
+      const br = document.createElement('br');
+      state.element.appendChild(br);
+      this.stateManager.updateVisibleNodes({ type: NodeType.LineBreak, node: br });
     } else if (char === '\t') {
       const tabSpan = document.createElement('span');
       tabSpan.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -415,10 +416,6 @@ export class TypecraftEngine {
     return this;
   }
 
-  public changeEasingFunction(easing: EasingFunction): this {
-    return this.setEasingFunction(easing);
-  }
-
   public setDirection(direction: Direction): this {
     this.options.direction = direction;
     const state = this.stateManager.getState();
@@ -426,42 +423,47 @@ export class TypecraftEngine {
     return this;
   }
 
-  public changeSpeed(speed: number): this {
-    this.speedManager.changeSpeed(speed);
+  public setSpeed(speedOptions: Partial<SpeedOptions>): this {
+    this.speedManager.setSpeed(speedOptions);
     return this;
   }
 
-  public changeTypeSpeed(speed: number): this {
-    this.speedManager.changeTypeSpeed(speed);
-    return this;
-  }
-
-  public changeDeleteSpeed(speed: number): this {
-    this.speedManager.changeDeleteSpeed(speed);
-    return this;
-  }
-
-  public changeDelaySpeed(delay: number): this {
-    this.speedManager.changeDelaySpeed(delay);
-    return this;
-  }
-
-  public changeCursor(cursor: string): this {
-    this.options.cursor.text = cursor;
-    const state = this.stateManager.getState();
-    if (state.cursorNode) {
-      state.cursorNode.textContent = cursor;
+  public changeCursor(cursorOptions: Partial<CursorOptions>): void {
+    if (cursorOptions.text !== undefined) {
+      this.options.cursor.text = cursorOptions.text;
     }
+    if (cursorOptions.color !== undefined) {
+      this.options.cursor.color = cursorOptions.color;
+    }
+    if (cursorOptions.style !== undefined) {
+      this.options.cursor.style = cursorOptions.style;
+      this.cursorManager.changeCursorStyle(cursorOptions.style);
+    }
+    if (cursorOptions.blink !== undefined) {
+      this.options.cursor.blink = cursorOptions.blink;
+      if (cursorOptions.blink) {
+        this.cursorManager.startBlinking();
+      } else {
+        this.cursorManager.stopBlinking();
+      }
+    }
+    if (cursorOptions.blinkSpeed !== undefined) {
+      this.options.cursor.blinkSpeed = cursorOptions.blinkSpeed;
+      this.cursorManager.changeBlinkSpeed(cursorOptions.blinkSpeed);
+    }
+    if (cursorOptions.opacity !== undefined) {
+      this.options.cursor.opacity = cursorOptions.opacity;
+      this.cursorManager.changeOpacity(cursorOptions.opacity);
+    }
+  }
+
+  public setTextEffect(effect: TextEffect): this {
+    this.options.textEffect = effect;
     return this;
   }
 
   public pauseFor(ms: number): this {
     this.addToQueue(QueueActionType.PAUSE, { ms });
-    return this;
-  }
-
-  public changeTextEffect(effect: TextEffect): this {
-    this.options.textEffect = effect;
     return this;
   }
 

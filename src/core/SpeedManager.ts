@@ -1,5 +1,5 @@
 import { EasingManager } from './EasingManager';
-import { TypecraftOptions } from './types';
+import { SpeedOptions, TypecraftOptions } from './types';
 
 export class SpeedManager {
   private options: TypecraftOptions;
@@ -8,37 +8,23 @@ export class SpeedManager {
     this.options = options;
   }
 
-  public changeSpeed(speed: number): void {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.type = speed;
-      this.options.speed.delete = speed;
-    } else {
-      this.options.speed = speed;
+  public setSpeed(speedOptions: Partial<SpeedOptions>): void {
+    if (typeof this.options.speed !== 'object') {
+      this.options.speed = {
+        type: this.options.speed as number,
+        delete: this.options.speed as number,
+        delay: 1500,
+      };
     }
-  }
 
-  public changeTypeSpeed(speed: number): void {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.type = speed;
-    } else {
-      this.options.speed = { type: speed, delete: speed, delay: 1500 };
-    }
-  }
+    const defaultSpeed = 50;
+    const defaultDelay = 1500;
 
-  public changeDeleteSpeed(speed: number): void {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.delete = speed;
-    } else {
-      this.options.speed = { type: speed, delete: speed, delay: 1500 };
-    }
-  }
-
-  public changeDelaySpeed(delay: number): void {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.delay = delay;
-    } else {
-      this.options.speed = { type: 50, delete: 50, delay: delay };
-    }
+    this.options.speed = {
+      type: speedOptions.type ?? this.options.speed.type ?? defaultSpeed,
+      delete: speedOptions.delete ?? this.options.speed.delete ?? defaultSpeed,
+      delay: speedOptions.delay ?? this.options.speed.delay ?? defaultDelay,
+    };
   }
 
   public getTypeSpeed(easingManager: EasingManager): number {

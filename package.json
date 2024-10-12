@@ -5,13 +5,13 @@
   "main": "./dist/typecraft-fx.umd.js",
   "module": "./dist/typecraft-fx.es.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "import": "./dist/typecraft-fx.es.js",
       "require": "./dist/typecraft-fx.umd.js"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

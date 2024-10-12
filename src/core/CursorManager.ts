@@ -76,6 +76,14 @@ export class CursorManager {
     }
   }
 
+  public changeBlinkSpeed(speed: number): void {
+    this.options.blinkSpeed = speed;
+  }
+
+  public changeOpacity(opacity: { min: number; max: number }): void {
+    this.options.opacity = opacity;
+  }
+
   public remove(): void {
     this.stopBlinking();
     if (this.cursorNode.parentNode) {

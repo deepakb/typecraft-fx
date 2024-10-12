@@ -92,7 +92,7 @@ const AdvancedComponent = () => {
       }}
       onInit={(typecraft) => {
         typecraft
-          .changeTextEffect(TextEffect.FadeIn)
+          .setTextEffect(TextEffect.FadeIn)
           .typeString('This text will fade in.')
           .pauseFor(1000)
           .deleteAll()
@@ -173,7 +173,7 @@ If you're not using React, you can still use TypecraftFX with vanilla JavaScript
 | `start()`                  | Starts the typecraft effect.                     |
 | `stop()`                   | Stops the typecraft effect.                      |
 | `changeCursorStyle(style)` | Changes the cursor style.                        |
-| `changeTextEffect(effect)` | Changes the text effect.                         |
+| `setTextEffect(effect)`    | Changes the text effect.                         |
 
 ### TypecraftOptions
 
