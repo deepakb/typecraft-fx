@@ -28,6 +28,7 @@ export class StateManager {
       lastCursorBlinkTime: 0,
       cursorPosition: 0,
       lastOperation: null,
+      ...options,
     };
   }
 

@@ -8,6 +8,7 @@ import {
   EventCallback,
   HTMLParseNode,
   EasingFunction,
+  CustomEffectFunction,
 } from './types';
 import { CursorManager } from './CursorManager';
 import { QueueManager } from './QueueManager';
@@ -33,8 +34,7 @@ export class TypecraftEngine {
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
     this.optionsManager = new OptionsManager();
-    this.optionsManager.validateElement(element);
-    this.options = this.optionsManager.mergeOptions(options);
+    this.options = this.optionsManager.initializeOptions(element, options);
     const htmlElement = typeof element === 'string' ? document.querySelector(element)! : element;
     this.stateManager = new StateManager(htmlElement as HTMLElement, this.options);
     this.cursorManager = new CursorManager(htmlElement as HTMLElement, this.options.cursor);
@@ -76,10 +76,10 @@ export class TypecraftEngine {
       this.update(deltaTime, currentTime);
 
       this.lastFrameTime = currentTime;
-      this.rafId = requestAnimationFrame(animate);
+      this.rafId = window.requestAnimationFrame(animate);
     };
 
-    this.rafId = requestAnimationFrame(animate);
+    this.rafId = window.requestAnimationFrame(animate);
   }
 
   private update(deltaTime: number, currentTime: number): void {
@@ -87,6 +87,10 @@ export class TypecraftEngine {
     this.cursorManager.updateBlink(currentTime);
 
     // Other update logic can be added here
+  }
+
+  public getElement(): HTMLElement {
+    return this.stateManager.getState().element;
   }
 
   private getTypeSpeed(): number {
@@ -273,8 +277,8 @@ export class TypecraftEngine {
     return nodes;
   }
 
-  private async typeCharacter(payload: { char: string }): Promise<void> {
-    const { char } = payload;
+  private async typeCharacter(payload: { char: string; color?: string }): Promise<void> {
+    const { char, color } = payload;
     const state = this.stateManager.getState();
 
     if (char === '\n') {
@@ -294,11 +298,22 @@ export class TypecraftEngine {
       if (!lastNode || lastNode.type !== NodeType.Character) {
         const span = document.createElement('span');
         state.element.appendChild(span);
+        if (color) {
+          span.style.color = color;
+        }
         lastNode = { type: NodeType.Character, node: span };
         this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
       }
       if (lastNode.node instanceof HTMLElement) {
-        (lastNode.node as HTMLElement).textContent += char;
+        if (color && lastNode.node.style.color !== color) {
+          const span = document.createElement('span');
+          span.style.color = color;
+          span.textContent = char;
+          state.element.appendChild(span);
+          this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
+        } else {
+          (lastNode.node as HTMLElement).textContent += char;
+        }
       }
     }
 
@@ -369,15 +384,17 @@ export class TypecraftEngine {
       .filter((node) => node.type === NodeType.Character)
       .map((node) => node.node as HTMLElement);
 
-    for (let i = 0; i < nodes.length; i++) {
-      await this.EffectManager.applyTextEffect(
-        effect,
-        nodes[i],
-        i,
-        () => this.getTypeSpeed(),
-        this.easingManager
-      );
-    }
+    await Promise.all(
+      nodes.map((node, i) =>
+        this.EffectManager.applyTextEffect(
+          effect,
+          node,
+          i,
+          () => this.getTypeSpeed(),
+          this.easingManager
+        )
+      )
+    );
 
     await Promise.resolve();
 
@@ -502,6 +519,11 @@ export class TypecraftEngine {
       this.addToQueue(QueueActionType.LOOP);
     }
 
+    return this;
+  }
+
+  public registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this {
+    this.EffectManager.registerCustomEffect(name, effectFunction);
     return this;
   }
 }

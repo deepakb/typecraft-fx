@@ -63,53 +63,47 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
         onInit(engineRef.current);
       }
 
-      if (onTypeStart) {
-        engineRef.current.on('typeStart', onTypeStart);
-      }
-      if (onTypeChar) {
-        engineRef.current.on('typeChar', onTypeChar);
-      }
-      if (onTypeComplete) {
-        engineRef.current.on('typeComplete', onTypeComplete);
-      }
-      if (onDeleteStart) {
-        engineRef.current.on('deleteStart', onDeleteStart);
-      }
-      if (onDeleteChar) {
-        engineRef.current.on('deleteChar', onDeleteChar);
-      }
-      if (onDeleteComplete) {
-        engineRef.current.on('deleteComplete', onDeleteComplete);
-      }
-      if (onPauseStart) {
-        engineRef.current.on('pauseStart', onPauseStart);
-      }
-      if (onPauseEnd) {
-        engineRef.current.on('pauseEnd', onPauseEnd);
-      }
-      if (onComplete) {
-        engineRef.current.on('complete', onComplete);
-      }
+      const eventHandlers: { [key: string]: ((arg?: any) => void) | undefined } = {
+        typeStart: onTypeStart,
+        typeChar: onTypeChar,
+        typeComplete: onTypeComplete,
+        deleteStart: onDeleteStart,
+        deleteChar: onDeleteChar,
+        deleteComplete: onDeleteComplete,
+        pauseStart: onPauseStart,
+        pauseEnd: onPauseEnd,
+        complete: onComplete,
+      };
+
+      Object.entries(eventHandlers).forEach(([event, handler]) => {
+        if (handler) {
+          engineRef.current?.on(event as any, handler);
+        }
+      });
 
       engineRef.current.start();
     }
 
     return () => {
       if (engineRef.current) {
-        engineRef.current.off('typeStart', () => {});
-        engineRef.current.off('typeChar', () => {});
-        engineRef.current.off('typeComplete', () => {});
-        engineRef.current.off('deleteStart', () => {});
-        engineRef.current.off('deleteChar', () => {});
-        engineRef.current.off('deleteComplete', () => {});
-        engineRef.current.off('pauseStart', () => {});
-        engineRef.current.off('pauseEnd', () => {});
-        engineRef.current.off('complete', () => {});
-
+        // Remove all event listeners
+        // engineRef.current.removeAllListeners();
         engineRef.current.stop();
       }
     };
-  }, []);
+  }, [
+    options,
+    onInit,
+    onTypeStart,
+    onTypeChar,
+    onTypeComplete,
+    onDeleteStart,
+    onDeleteChar,
+    onDeleteComplete,
+    onPauseStart,
+    onPauseEnd,
+    onComplete,
+  ]);
 
   return <div ref={elementRef} className={className} style={{ ...defaultStyles, ...style }} />;
 });

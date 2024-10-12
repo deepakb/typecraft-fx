@@ -15,10 +15,6 @@ describe('EffectManager', () => {
     } as any;
     mockNode = document.createElement('div');
     vi.useFakeTimers();
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
-      setTimeout(() => cb(performance.now()), 0);
-      return 0;
-    });
   });
 
   afterEach(() => {
@@ -27,48 +23,77 @@ describe('EffectManager', () => {
   });
 
   describe('applyFadeInEffect', () => {
-    it('should apply fade in effect', () => {
+    it('should apply fade in effect', async () => {
       const resolveMock = vi.fn();
-      (effectManager as any).applyFadeInEffect(mockNode, 0, resolveMock, mockEasingManager);
+      const animationPromise = (effectManager as any).applyFadeInEffect(
+        mockNode,
+        resolveMock,
+        mockEasingManager
+      );
 
-      expect(mockNode.style.opacity).toBe('0');
+      // Advance timers and run microtasks
       vi.advanceTimersByTime(100);
+      await Promise.resolve();
+
       expect(mockEasingManager.applyEasing).toHaveBeenCalled();
       expect(resolveMock).toHaveBeenCalled();
+      expect(mockNode.style.opacity).toBe('0.5');
+
+      await animationPromise;
     });
   });
 
   describe('applySlideInEffect', () => {
-    it('should apply slide in effect', () => {
+    it('should apply slide in effect', async () => {
       const resolveMock = vi.fn();
-      (effectManager as any).applySlideInEffect(mockNode, 0, resolveMock, mockEasingManager);
+      const animationPromise = (effectManager as any).applySlideInEffect(
+        mockNode,
+        0,
+        resolveMock,
+        mockEasingManager
+      );
 
-      expect(mockNode.style.transform).toBe('translateY(20px)');
-      expect(mockNode.style.opacity).toBe('0');
-      vi.advanceTimersByTime(200);
+      // Advance timers and run microtasks
+      vi.advanceTimersByTime(220); // 200ms for animation + 20ms for setTimeout
+      await Promise.resolve();
+
       expect(mockEasingManager.applyEasing).toHaveBeenCalled();
       expect(resolveMock).toHaveBeenCalled();
+      expect(mockNode.style.transform).toBe('translateY(10px)');
+      expect(mockNode.style.opacity).toBe('0.5');
+
+      await animationPromise;
     });
   });
 
   describe('applyGlitchEffect', () => {
-    it('should apply glitch effect', () => {
+    it('should apply glitch effect', async () => {
       const resolveMock = vi.fn();
       mockNode.textContent = 'A';
-      (effectManager as any).applyGlitchEffect(mockNode, 0, resolveMock, mockEasingManager);
+      const animationPromise = (effectManager as any).applyGlitchEffect(
+        mockNode,
+        0,
+        resolveMock,
+        mockEasingManager
+      );
 
-      vi.advanceTimersByTime(200);
+      // Advance timers and run microtasks
+      vi.advanceTimersByTime(225); // 200ms for animation + 25ms for setTimeout
+      await Promise.resolve();
+
       expect(mockEasingManager.applyEasing).toHaveBeenCalled();
       expect(resolveMock).toHaveBeenCalled();
       expect(mockNode.textContent).toBe('A');
+
+      await animationPromise;
     });
   });
 
   describe('applyTypecraftEffect', () => {
-    it('should apply typecraft effect', () => {
+    it('should apply typecraft effect', async () => {
       const resolveMock = vi.fn();
       const getTypeSpeed = vi.fn().mockReturnValue(100);
-      (effectManager as any).applyTypecraftEffect(
+      const animationPromise = (effectManager as any).applyTypecraftEffect(
         mockNode,
         0,
         getTypeSpeed,
@@ -77,23 +102,42 @@ describe('EffectManager', () => {
       );
 
       expect(mockNode.style.visibility).toBe('hidden');
+
+      // Advance timers and run microtasks
       vi.advanceTimersByTime(50);
+      await Promise.resolve();
+
       expect(mockNode.style.visibility).toBe('visible');
       expect(mockEasingManager.applyEasing).toHaveBeenCalled();
       expect(resolveMock).toHaveBeenCalled();
+
+      await animationPromise;
     });
   });
 
   describe('applyRainbowEffect', () => {
-    it('should apply rainbow effect', () => {
+    it('should apply rainbow effect', async () => {
       const resolveMock = vi.fn();
-      (effectManager as any).applyRainbowEffect(mockNode, 0, resolveMock, mockEasingManager);
+      mockNode.textContent = 'Test';
+      const animationPromise = (effectManager as any).applyRainbowEffect(
+        mockNode,
+        0,
+        resolveMock,
+        mockEasingManager
+      );
 
-      expect(mockNode.style.color).toBe('red');
-      expect(mockNode.style.opacity).toBe('0');
-      vi.advanceTimersByTime(100);
-      expect(mockEasingManager.applyEasing).toHaveBeenCalled();
+      // Advance timers and run microtasks
+      vi.advanceTimersByTime(200);
+      await Promise.resolve();
+
+      expect(mockNode.children.length).toBe(4);
+      expect((mockNode.children[0] as HTMLElement).style.color).toBe('red');
+      expect((mockNode.children[1] as HTMLElement).style.color).toBe('orange');
+      expect((mockNode.children[2] as HTMLElement).style.color).toBe('yellow');
+      expect((mockNode.children[3] as HTMLElement).style.color).toBe('green');
       expect(resolveMock).toHaveBeenCalled();
+
+      await animationPromise;
     });
   });
 

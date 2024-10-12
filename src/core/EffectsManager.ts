@@ -1,15 +1,27 @@
 import { EasingManager } from './EasingManager';
-import { TextEffect } from './types';
+import { CustomEffectFunction, TextEffect } from './types';
 
 export class EffectManager {
+  private continuousEffects: Map<HTMLElement, number> = new Map();
+  private customEffects: Map<string, CustomEffectFunction> = new Map();
+
+  public registerCustomEffect(name: string, effectFunction: CustomEffectFunction): void {
+    this.customEffects.set(name, effectFunction);
+  }
+
   public async applyTextEffect(
-    effect: TextEffect,
+    effect: TextEffect | string,
     node: HTMLElement,
     index: number,
     getTypeSpeed: () => number,
-    easingManager: EasingManager
+    easingManager: EasingManager,
+    color?: string
   ): Promise<void> {
     return new Promise((resolve) => {
+      if (color) {
+        node.style.color = color;
+      }
+
       switch (effect) {
         case TextEffect.FadeIn:
           this.applyFadeInEffect(node, resolve, easingManager);
@@ -26,9 +38,21 @@ export class EffectManager {
         case TextEffect.Rainbow:
           this.applyRainbowEffect(node, index, resolve, easingManager);
           break;
-        case TextEffect.None:
-        default:
+        case TextEffect.Continuous:
+          this.applyContinuousEffect(node, (node, progress) => {
+            node.style.opacity = (0.7 + Math.sin(progress * Math.PI * 2) * 0.3).toString();
+          });
           resolve();
+          break;
+        case TextEffect.Custom:
+        default:
+          if (typeof effect === 'string' && this.customEffects.has(effect)) {
+            const customEffect = this.customEffects.get(effect)!;
+            customEffect(node, index, getTypeSpeed, easingManager);
+            resolve();
+          } else {
+            resolve();
+          }
           break;
       }
     });
@@ -50,13 +74,13 @@ export class EffectManager {
       node.style.opacity = easedProgress.toString();
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        window.requestAnimationFrame(animate);
       } else {
         resolve();
       }
     };
 
-    requestAnimationFrame(animate);
+    window.requestAnimationFrame(animate);
   }
 
   private applySlideInEffect(
@@ -79,13 +103,13 @@ export class EffectManager {
       node.style.opacity = easedProgress.toString();
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        window.requestAnimationFrame(animate);
       } else {
         resolve();
       }
     };
 
-    setTimeout(() => requestAnimationFrame(animate), index * 20);
+    setTimeout(() => window.requestAnimationFrame(animate), index * 20);
   }
 
   private applyGlitchEffect(
@@ -110,14 +134,14 @@ export class EffectManager {
         } else {
           node.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
         }
-        requestAnimationFrame(animate);
+        window.requestAnimationFrame(animate);
       } else {
         node.textContent = originalChar;
         resolve();
       }
     };
 
-    setTimeout(() => requestAnimationFrame(animate), index * 25);
+    setTimeout(() => window.requestAnimationFrame(animate), index * 25);
   }
 
   private applyTypecraftEffect(
@@ -143,26 +167,44 @@ export class EffectManager {
     easingManager: EasingManager
   ): void {
     const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
-    node.style.color = colors[index % colors.length];
-    node.style.opacity = '0';
-    const duration = 100; // 0.1s in milliseconds
-    const startTime = performance.now();
+    const text = node.textContent || '';
+    node.textContent = '';
 
-    const animate = (currentTime: number) => {
-      const elapsedTime = currentTime - startTime;
-      const progress = Math.min(elapsedTime / duration, 1);
-      const easedProgress = easingManager.applyEasing(progress);
+    const colorNextChar = (charIndex: number) => {
+      if (charIndex < text.length) {
+        const span = document.createElement('span');
+        span.textContent = text[charIndex];
+        const colorIndex = (index + charIndex) % colors.length;
+        span.style.color = colors[colorIndex];
+        node.appendChild(span);
 
-      node.style.opacity = easedProgress.toString();
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+        setTimeout(() => colorNextChar(charIndex + 1), 50);
       } else {
         resolve();
       }
     };
 
-    setTimeout(() => requestAnimationFrame(animate), index * 20);
+    colorNextChar(0);
+  }
+
+  public applyContinuousEffect(
+    node: HTMLElement,
+    effect: (node: HTMLElement, progress: number) => void
+  ): void {
+    const animate = (time: number) => {
+      const progress = (time % 1000) / 1000; // 1-second loop
+      effect(node, progress);
+      this.continuousEffects.set(node, window.requestAnimationFrame(animate));
+    };
+    this.continuousEffects.set(node, window.requestAnimationFrame(animate));
+  }
+
+  public stopContinuousEffect(node: HTMLElement): void {
+    const animationId = this.continuousEffects.get(node);
+    if (animationId) {
+      window.cancelAnimationFrame(animationId);
+      this.continuousEffects.delete(node);
+    }
   }
 
   public resetEffectStyles(nodes: HTMLElement[], effect: TextEffect): void {

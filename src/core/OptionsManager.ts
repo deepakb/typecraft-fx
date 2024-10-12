@@ -1,6 +1,15 @@
 import { TypecraftOptions, CursorStyle, Direction, TextEffect } from './types';
 
 export class OptionsManager {
+  public initializeOptions(
+    element: string | HTMLElement,
+    options: Partial<TypecraftOptions>
+  ): TypecraftOptions {
+    this.validateElement(element);
+    const mergedOptions = this.mergeOptions(options);
+    return mergedOptions;
+  }
+
   public validateElement(element: string | HTMLElement): void {
     if (typeof element === 'string') {
       const el = document.querySelector(element);
@@ -33,7 +42,7 @@ export class OptionsManager {
       html: true,
     };
 
-    return {
+    const mergedOptions = {
       ...defaultOptions,
       ...options,
       cursor: {
@@ -41,5 +50,7 @@ export class OptionsManager {
         ...options.cursor,
       },
     };
+
+    return mergedOptions;
   }
 }

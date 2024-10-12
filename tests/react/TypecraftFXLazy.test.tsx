@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { TypecraftFXWithSuspense } from '../../src/react/TypecraftFXLazy';
+import { TypecraftFXLazy } from '../../src/react/TypecraftFXLazy';
 import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../../src';
 
 // Mock the TypecraftFX
@@ -8,7 +8,7 @@ vi.mock('../../src/react/TypecraftFX', () => ({
   TypecraftFX: () => <div data-testid="mocked-typecraft">Mocked Typecraft</div>,
 }));
 
-describe('TypecraftFXWithSuspense', () => {
+describe('TypecraftFXLazy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,7 +34,7 @@ describe('TypecraftFXWithSuspense', () => {
       textEffect: TextEffect.None,
     };
 
-    render(<TypecraftFXWithSuspense {...options} />);
+    render(<TypecraftFXLazy {...options} />);
 
     // Initially, it should show the loading state
     expect(screen.getByText('Loading...')).toBeInTheDocument();

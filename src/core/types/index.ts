@@ -1,3 +1,5 @@
+import { EasingManager } from '../EasingManager';
+
 export interface CursorOptions {
   text: string;
   color: string;
@@ -15,6 +17,13 @@ export interface SpeedOptions {
   delete: number;
   delay: number;
 }
+
+export type CustomEffectFunction = (
+  node: HTMLElement,
+  index: number,
+  getTypeSpeed: () => number,
+  easingManager: EasingManager
+) => void;
 
 export interface TypecraftClass {
   // Core methods
@@ -140,6 +149,8 @@ export enum TextEffect {
   Glitch = 'glitch',
   Typecraft = 'typecraft',
   Rainbow = 'rainbow',
+  Continuous = 'continuous',
+  Custom = 'custom',
 }
 
 export type TypecraftEvent =

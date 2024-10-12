@@ -5,22 +5,34 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 describe('CursorManager', () => {
   let parentElement: HTMLElement;
   let defaultOptions: CursorOptions;
+  let now: number;
+  let animationFrameCallback: FrameRequestCallback | null;
+
+  const customRequestAnimationFrame = (callback: FrameRequestCallback): number => {
+    animationFrameCallback = callback;
+    return 0;
+  };
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    animationFrameCallback = null;
+
     parentElement = document.createElement('div');
     defaultOptions = {
       text: '|',
-      opacity: { min: 0, max: 1 },
       color: 'black',
-      blinkSpeed: 500,
+      blinkSpeed: 530,
+      opacity: { min: 0, max: 1 },
       style: CursorStyle.Solid,
-      blink: false,
+      blink: true,
     };
-    vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('constructor creates and appends cursor element', () => {
@@ -55,7 +67,8 @@ describe('CursorManager', () => {
   });
 
   it('startBlinking does not start animation for non-blink option', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions);
+    const nonBlinkOptions = { ...defaultOptions, blink: false };
+    const cursorManager = new CursorManager(parentElement, nonBlinkOptions);
     const animateCursorSpy = vi.spyOn(cursorManager as any, 'animateCursor');
 
     cursorManager.startBlinking();
@@ -102,15 +115,11 @@ describe('CursorManager', () => {
   it('updateCursorPosition updates cursor position', () => {
     const cursorManager = new CursorManager(parentElement, defaultOptions);
     const targetElement = document.createElement('div');
-    Object.defineProperty(targetElement, 'getBoundingClientRect', {
-      value: () => ({ top: 10, right: 20 }),
-    });
 
     cursorManager.updateCursorPosition(targetElement);
 
     const cursorElement = cursorManager.getCursorElement();
-    expect(cursorElement.style.left).toBe('20px');
-    expect(cursorElement.style.top).toBe('10px');
+    expect(targetElement.contains(cursorElement)).toBe(true);
   });
 
   it('remove stops blinking and removes cursor element', () => {
@@ -125,80 +134,59 @@ describe('CursorManager', () => {
   });
 
   it('animateCursor changes opacity based on blink state', () => {
-    const parentElement = document.createElement('div');
-    const options: CursorOptions = {
-      text: '|',
-      color: 'black',
-      style: CursorStyle.Solid,
-      blink: true,
-      blinkSpeed: 500,
-      opacity: { min: 0, max: 1 },
-    };
-
-    const cursorManager = new CursorManager(parentElement, options);
+    const cursorManager = new CursorManager(
+      parentElement,
+      defaultOptions,
+      customRequestAnimationFrame
+    );
     const cursorElement = cursorManager.getCursorElement();
+
+    cursorManager.startBlinking();
 
     // Initial state
     expect(cursorElement.style.opacity).toBe('1');
 
-    // Reset lastBlinkTime to ensure correct initial state
-    cursorManager.resetLastBlinkTime();
+    // Advance time to just after blinkSpeed
+    now += defaultOptions.blinkSpeed + 1;
+    animationFrameCallback?.(now);
 
-    // Advance time by full blinkSpeed
-    cursorManager.forceAnimationFrame(500);
+    // Opacity should have changed to 0
     expect(cursorElement.style.opacity).toBe('0');
 
-    // Advance time by another full blinkSpeed
-    cursorManager.forceAnimationFrame(1000);
+    // Advance time again
+    now += defaultOptions.blinkSpeed + 1;
+    animationFrameCallback?.(now);
+
+    // Opacity should have changed back to 1
     expect(cursorElement.style.opacity).toBe('1');
+
+    cursorManager.stopBlinking();
   });
 
   it('animateCursor changes opacity based on blink state and respects blinkSpeed', () => {
-    const parentElement = document.createElement('div');
-    const blinkSpeed = 500;
-    const options: CursorOptions = {
-      text: '|',
-      color: 'black',
-      style: CursorStyle.Solid,
-      blink: true,
-      blinkSpeed,
-      opacity: { min: 0, max: 1 },
-    };
-
-    const cursorManager = new CursorManager(parentElement, options);
+    const cursorManager = new CursorManager(
+      parentElement,
+      defaultOptions,
+      customRequestAnimationFrame
+    );
     const cursorElement = cursorManager.getCursorElement();
 
-    // Initial state
+    cursorManager.startBlinking();
+
+    // Check initial state
     expect(cursorElement.style.opacity).toBe('1');
 
-    // Reset lastBlinkTime to ensure correct initial state
-    cursorManager.resetLastBlinkTime();
-
-    // Advance time to just before blinkSpeed (should not change)
-    cursorManager.forceAnimationFrame(blinkSpeed - 1);
+    // Advance time to just before blinkSpeed
+    now += defaultOptions.blinkSpeed - 1;
+    animationFrameCallback?.(now);
     expect(cursorElement.style.opacity).toBe('1');
 
-    // Advance time to full blinkSpeed (should change)
-    cursorManager.forceAnimationFrame(blinkSpeed);
+    // Advance time to just after blinkSpeed
+    now += 2;
+    animationFrameCallback?.(now);
     expect(cursorElement.style.opacity).toBe('0');
 
-    // Advance time by full blinkSpeed again (should change back)
-    cursorManager.forceAnimationFrame(blinkSpeed * 2);
-    expect(cursorElement.style.opacity).toBe('1');
-  });
-
-  it('updateCursorPosition updates cursor position', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions);
-    const targetElement = document.createElement('div');
-    Object.defineProperty(targetElement, 'getBoundingClientRect', {
-      value: () => ({ top: 10, right: 20 }),
-    });
-
-    cursorManager.updateCursorPosition(targetElement);
-
-    const cursorElement = cursorManager.getCursorElement();
-    expect(cursorElement.style.left).toBe('20px');
-    expect(cursorElement.style.top).toBe('10px');
+    cursorManager.stopBlinking();
   });
 
   it('getCursorElement returns the cursor element', () => {

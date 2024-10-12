@@ -1,6 +1,6 @@
 import { Meta, StoryObj } from '@storybook/react';
 import { TypecraftFX, Direction, CursorStyle, TextEffect } from '../src';
-export { default as Documentation } from './Typecraft.mdx';
+// export { default as Documentation } from './Typecraft.mdx';
 
 const meta: Meta<typeof TypecraftFX> = {
   title: 'TypecraftFX',
@@ -109,6 +109,33 @@ export const TextEffectGlitch: Story = {
     speed: { type: 50, delete: 50, delay: 1000 },
     autoStart: true,
     textEffect: TextEffect.Glitch,
+  },
+};
+
+export const TextEffectTypecraft: Story = {
+  args: {
+    strings: ['Typecraft effect in action'],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    textEffect: TextEffect.Typecraft,
+  },
+};
+
+export const TextEffectRainbow: Story = {
+  args: {
+    strings: ['Rainbow colored text'],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    textEffect: TextEffect.Rainbow,
+  },
+};
+
+export const TextEffectContinuous: Story = {
+  args: {
+    strings: ['Continuous colored text'],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    autoStart: true,
+    textEffect: TextEffect.Continuous,
   },
 };
 
