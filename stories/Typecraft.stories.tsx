@@ -1,10 +1,20 @@
-import { Meta, StoryObj } from '@storybook/react';
-import { TypecraftFX, Direction, CursorStyle, TextEffect } from '../src';
-// export { default as Documentation } from './Typecraft.mdx';
+import { fn } from '@storybook/test';
+import { TypecraftFX, Direction, CursorStyle, TextEffect, TypecraftEngine } from '../src';
 
-const meta: Meta<typeof TypecraftFX> = {
-  title: 'TypecraftFX',
+export const ActionsData = {
+  onInit: fn(),
+  onComplete: fn(),
+  onTypeStart: fn(),
+};
+
+export default {
   component: TypecraftFX,
+  title: 'TypecraftFX',
+  tags: ['autodocs'],
+  excludeStories: /.*Data$/,
+  args: {
+    ...ActionsData,
+  },
   argTypes: {
     strings: { control: 'object' },
     speed: {
@@ -21,37 +31,31 @@ const meta: Meta<typeof TypecraftFX> = {
       control: 'object',
       description: 'Cursor configuration',
     },
-    onInit: { action: 'initialized' },
   },
 };
 
-export default meta;
-type Story = StoryObj<typeof TypecraftFX>;
-
-export const BasicUsage: Story = {
+export const Default = {
   args: {
-    strings: ['Welcome to TypecraftFX', ' A powerful typing animation library'],
+    strings: ['Welcome to TypecraftFX', 'A powerful typing animation library'],
     speed: { type: 50, delete: 50, delay: 1000 },
     loop: false,
     autoStart: true,
   },
 };
 
-export const LoopingText: Story = {
+export const LoopingText = {
   args: {
+    ...Default.args,
     strings: ['First string', 'Second string', 'Third string'],
-    speed: { type: 50, delete: 50, delay: 1000 },
     loop: true,
-    autoStart: true,
     pauseFor: 1000,
   },
 };
 
-export const CustomCursor: Story = {
+export const CustomCursor = {
   args: {
+    ...Default.args,
     strings: ['Custom cursor example'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       text: '_',
       color: 'red',
@@ -63,112 +67,102 @@ export const CustomCursor: Story = {
   },
 };
 
-export const RTLText: Story = {
+export const RTLText = {
   args: {
+    ...Default.args,
     strings: ['مرحبا بكم في TypecraftFX', 'مكتبة رسوم متحركة قوية للكتابة'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     direction: Direction.RTL,
   },
 };
 
-export const HTMLContent: Story = {
+export const HTMLContent = {
   args: {
+    ...Default.args,
     strings: [
       'Welcome to <strong>TypecraftFX</strong>',
       'Supports <em>HTML</em> content',
       '<span style="color: blue;">Colored text</span>',
     ],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     html: true,
   },
 };
 
-export const TextEffectFadeIn: Story = {
+export const TextEffectFadeIn = {
   args: {
+    ...Default.args,
     strings: ['This text fades in'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.FadeIn,
   },
 };
 
-export const TextEffectSlideIn: Story = {
+export const TextEffectSlideIn = {
   args: {
+    ...Default.args,
     strings: ['This text slides in'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.SlideIn,
   },
 };
 
-export const TextEffectGlitch: Story = {
+export const TextEffectGlitch = {
   args: {
+    ...Default.args,
     strings: ['This text has a glitch effect'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.Glitch,
   },
 };
 
-export const TextEffectTypecraft: Story = {
+export const TextEffectTypecraft = {
   args: {
+    ...Default.args,
     strings: ['Typecraft effect in action'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.Typecraft,
   },
 };
 
-export const TextEffectRainbow: Story = {
+export const TextEffectRainbow = {
   args: {
+    ...Default.args,
     strings: ['Rainbow colored text'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.Rainbow,
   },
 };
 
-export const TextEffectContinuous: Story = {
+export const TextEffectContinuous = {
   args: {
+    ...Default.args,
     strings: ['Continuous colored text'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     textEffect: TextEffect.Continuous,
   },
 };
 
-export const DifferentSpeeds: Story = {
+export const DifferentSpeeds = {
   args: {
+    ...Default.args,
     strings: ['Fast typing', 'Slow typing', 'Normal speed'],
     speed: { type: 10, delete: 5, delay: 500 },
-    autoStart: true,
   },
 };
 
-export const LongPauseBetweenStrings: Story = {
+export const LongPauseBetweenStrings = {
   args: {
+    ...Default.args,
     strings: ['First string', 'Long pause', 'Third string'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     pauseFor: 3000,
   },
 };
 
-export const NoAutoStart: Story = {
+export const NoAutoStart = {
   args: {
+    ...Default.args,
     strings: ["This won't start automatically", 'You need to call .start()'],
-    speed: { type: 50, delete: 50, delay: 1000 },
     autoStart: false,
   },
 };
 
-export const CursorStyleSolid: Story = {
+export const CursorStyleSolid = {
   args: {
+    ...Default.args,
     strings: ['Solid cursor style'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       style: CursorStyle.Solid,
       blink: false,
@@ -180,11 +174,10 @@ export const CursorStyleSolid: Story = {
   },
 };
 
-export const CursorStyleBlink: Story = {
+export const CursorStyleBlink = {
   args: {
+    ...Default.args,
     strings: ['Blinking cursor style'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       style: CursorStyle.Blink,
       blink: true,
@@ -196,11 +189,10 @@ export const CursorStyleBlink: Story = {
   },
 };
 
-export const CursorStyleSmooth: Story = {
+export const CursorStyleSmooth = {
   args: {
+    ...Default.args,
     strings: ['Smooth cursor style'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       style: CursorStyle.Smooth,
       blink: true,
@@ -212,11 +204,10 @@ export const CursorStyleSmooth: Story = {
   },
 };
 
-export const CustomCursorColor: Story = {
+export const CustomCursorColor = {
   args: {
+    ...Default.args,
     strings: ['Custom cursor color'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       text: '|',
       color: '#00ff00',
@@ -228,11 +219,10 @@ export const CustomCursorColor: Story = {
   },
 };
 
-export const CustomCursorOpacity: Story = {
+export const CustomCursorOpacity = {
   args: {
+    ...Default.args,
     strings: ['Custom cursor opacity'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     cursor: {
       text: '|',
       opacity: { min: 0.2, max: 0.8 },
@@ -244,8 +234,9 @@ export const CustomCursorOpacity: Story = {
   },
 };
 
-export const ComplexChaining: Story = {
+export const ComplexChaining = {
   args: {
+    ...Default.args,
     strings: [
       'Welcome to TypecraftFX!\n',
       "Let's explore some features:",
@@ -255,52 +246,44 @@ export const ComplexChaining: Story = {
       '\t4. RTL support',
       '\t\tEnjoy using TypecraftFX!',
     ],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     pauseFor: 500,
     loop: false,
   },
 };
 
-export const DynamicSpeedChange: Story = {
+export const DynamicSpeedChange = {
   args: {
+    ...Default.args,
     strings: [
       'This is typed at normal speed. ',
       'This is typed very fast! ',
       'This is typed very slowly.',
     ],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
-    onInit: (instance) => {
-      // We can't directly control the typing speed for each string,
-      // but we can log when each string starts typing
+    onInit: (instance: TypecraftEngine) => {
       instance.on('typeStart', (currentString: string) => {
         console.log(`Started typing: ${currentString}`);
-        // Here you could potentially update some state or perform other actions
       });
     },
   },
 };
 
-export const MixedHTMLAndPlainText: Story = {
+export const MixedHTMLAndPlainText = {
   args: {
+    ...Default.args,
     strings: [
       'This is plain text',
       'This is <strong>bold</strong> and <em>italic</em>',
       'Back to plain text',
     ],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
     html: true,
   },
 };
 
-export const CallbackFunctions: Story = {
+export const CallbackFunctions = {
   args: {
+    ...Default.args,
     strings: ['This string has a callback at the end.'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
-    onInit: (instance) => {
+    onInit: (instance: TypecraftEngine) => {
       instance.on('complete', () => {
         console.log('Typing completed!');
         alert('Typing completed!');
@@ -309,18 +292,16 @@ export const CallbackFunctions: Story = {
   },
 };
 
-export const MultilineText: Story = {
+export const MultilineText = {
   args: {
+    ...Default.args,
     strings: ['This is a multiline\ntext example.\nIt should work correctly.'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
   },
 };
 
-export const EmojisAndSpecialCharacters: Story = {
+export const EmojisAndSpecialCharacters = {
   args: {
+    ...Default.args,
     strings: ['Emojis 😊🎉🚀', '\nSpecial characters: àáâãäå', '\nSymbols: ©®™℠'],
-    speed: { type: 50, delete: 50, delay: 1000 },
-    autoStart: true,
   },
 };
