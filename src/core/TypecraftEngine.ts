@@ -139,64 +139,61 @@ export class TypecraftEngine {
   }
 
   private async runQueue(): Promise<void> {
-    const queueItem = this.queueManager.getNext();
-    if (!queueItem) {
-      this.emit('complete');
-      if (this.options.loop) {
-        this.typeAllStrings();
-        await this.runQueue();
-      } else {
-        this.checkOperationComplete();
-      }
-      return;
-    }
-
-    const { type, payload } = queueItem;
-    this.stateManager.updateLastOperation(type);
-
-    switch (type) {
-      case QueueActionType.TYPE:
-      case QueueActionType.TYPE_CHARACTER:
-        await this.typeCharacter(payload);
-        break;
-      case QueueActionType.TYPE_HTML_TAG_OPEN:
-        await this.typeHtmlTagOpen(payload);
-        break;
-      case QueueActionType.TYPE_HTML_CONTENT:
-        await this.typeHtmlContent(payload.content);
-        break;
-      case QueueActionType.TYPE_HTML_TAG_CLOSE:
-        await this.typeHtmlTagClose(payload);
-        break;
-      case QueueActionType.DELETE:
-      case QueueActionType.DELETE_CHARACTER:
-        const state = this.stateManager.getState();
-        if (state.visibleNodes.length > 0) {
-          await this.deleteCharacter();
-        } else {
-          this.emit('deleteSkipped');
-        }
-        break;
-      case QueueActionType.PAUSE:
-        await this.wait(payload.ms);
-        break;
-      case QueueActionType.CALLBACK:
-      case QueueActionType.CALL_FUNCTION:
-        if (typeof payload.callback === 'function') {
-          await Promise.resolve(payload.callback());
-        }
-        await Promise.resolve(payload.callback());
-        break;
-      case QueueActionType.LOOP:
-        this.typeAllStrings();
+    while (true) {
+      const queueItem = this.queueManager.getNext();
+      if (!queueItem) {
         this.emit('complete');
+        if (this.options.loop) {
+          this.typeAllStrings();
+        } else {
+          this.checkOperationComplete();
+        }
         break;
-      default:
-        // eslint-disable-next-line no-console
-        console.warn(`Unknown queue action type: ${type}`);
-    }
+      }
 
-    await this.runQueue();
+      const { type, payload } = queueItem;
+      this.stateManager.updateLastOperation(type);
+
+      switch (type) {
+        case QueueActionType.TYPE:
+        case QueueActionType.TYPE_CHARACTER:
+          await this.typeCharacter(payload);
+          break;
+        case QueueActionType.TYPE_HTML_TAG_OPEN:
+          await this.typeHtmlTagOpen(payload);
+          break;
+        case QueueActionType.TYPE_HTML_CONTENT:
+          await this.typeHtmlContent(payload.content);
+          break;
+        case QueueActionType.TYPE_HTML_TAG_CLOSE:
+          await this.typeHtmlTagClose(payload);
+          break;
+        case QueueActionType.DELETE:
+        case QueueActionType.DELETE_CHARACTER:
+          const state = this.stateManager.getState();
+          if (state.visibleNodes.length > 0) {
+            await this.deleteCharacter();
+          } else {
+            this.emit('deleteSkipped');
+          }
+          break;
+        case QueueActionType.PAUSE:
+          await this.wait(payload.ms);
+          break;
+        case QueueActionType.CALLBACK:
+        case QueueActionType.CALL_FUNCTION:
+          if (typeof payload.callback === 'function') {
+            await Promise.resolve(payload.callback());
+          }
+          break;
+        case QueueActionType.LOOP:
+          this.typeAllStrings();
+          this.emit('complete');
+          break;
+        default:
+          console.warn(`Unknown queue action type: ${type}`);
+      }
+    }
   }
 
   private async typeHtmlTagOpen(payload: {
@@ -474,11 +471,7 @@ export class TypecraftEngine {
     if (this.options.strings.length && !state.queue.length) {
       this.typeAllStrings();
     }
-    return new Promise((resolve) => {
-      this.runQueue().then(() => {
-        resolve();
-      });
-    });
+    return this.runQueue();
   }
 
   public stop(): void {
@@ -500,7 +493,10 @@ export class TypecraftEngine {
   }
 
   public callFunction(callback: () => void): this {
-    this.addToQueue(QueueActionType.CALL_FUNCTION, { callback });
+    this.queueManager.add({
+      type: QueueActionType.CALL_FUNCTION,
+      payload: { callback },
+    });
     return this;
   }
 
