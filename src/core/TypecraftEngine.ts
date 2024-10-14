@@ -23,7 +23,7 @@ import { EasingManager } from './EasingManager';
 
 export class TypecraftEngine {
   private options: TypecraftOptions;
-  private cursorManager: CursorManager;
+  private cursorManager!: CursorManager;
   private queueManager: QueueManager;
   private EffectManager: EffectManager;
   private optionsManager: OptionsManager;
@@ -39,11 +39,6 @@ export class TypecraftEngine {
     this.optionsManager = new OptionsManager(htmlElement as HTMLElement, options);
     this.options = this.optionsManager.getOptions();
     this.stateManager = new StateManager(htmlElement as HTMLElement, this.options);
-    this.cursorManager = new CursorManager(htmlElement as HTMLElement, this.options.cursor);
-    this.cursorManager.updateCursorPosition(htmlElement as HTMLElement);
-    if (this.options.cursor.blink) {
-      this.cursorManager.startBlinking();
-    }
     this.queueManager = new QueueManager();
     this.EffectManager = new EffectManager();
     this.stringManager = new StringManager(this.queueManager);
@@ -53,19 +48,15 @@ export class TypecraftEngine {
   }
 
   private init(): void {
-    this.setupCursor();
     const state = this.stateManager.getState();
     state.element.style.direction = this.options.direction;
 
-    if (this.options.cursor.blink) {
-      this.cursorManager.startBlinking();
-    }
+    this.setupCursor();
 
     if (this.options.autoStart && this.options.strings.length) {
       this.typeAllStrings();
+      this.startAnimationLoop();
     }
-
-    this.startAnimationLoop();
   }
 
   private startAnimationLoop(): void {
@@ -101,10 +92,11 @@ export class TypecraftEngine {
 
   private setupCursor(): void {
     const state = this.stateManager.getState();
-    this.cursorManager = new CursorManager(state.element, {
-      ...this.options.cursor,
-      blink: this.options.cursor.blink || false,
-    });
+    this.cursorManager = new CursorManager(state.element, this.options.cursor);
+    this.cursorManager.updateCursorPosition(state.element);
+    if (this.options.cursor.blink) {
+      this.cursorManager.startBlinking();
+    }
   }
 
   private updateCursorStyle(): void {
@@ -470,6 +462,9 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
     if (this.options.strings.length && !state.queue.length) {
       this.typeAllStrings();
+    }
+    if (!this.rafId) {
+      this.startAnimationLoop();
     }
     return this.runQueue();
   }

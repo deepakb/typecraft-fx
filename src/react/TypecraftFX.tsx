@@ -81,13 +81,13 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
         }
       });
 
-      engineRef.current.start();
+      if (options.autoStart) {
+        engineRef.current.start();
+      }
     }
 
     return () => {
       if (engineRef.current) {
-        // Remove all event listeners
-        // engineRef.current.removeAllListeners();
         engineRef.current.stop();
       }
     };

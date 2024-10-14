@@ -65,7 +65,7 @@ describe('TypecraftFX', () => {
       },
       pauseFor: 2000,
       loop: true,
-      autoStart: false,
+      autoStart: true,
       easingFunction: (t) => t,
       html: false,
       textEffect: TextEffect.None,
@@ -133,5 +133,32 @@ describe('TypecraftFX', () => {
     unmount();
 
     expect(mockTypecraft.stop).toHaveBeenCalled();
+  });
+
+  it('does not start automatically when autoStart is false', () => {
+    const options: TypecraftOptions = {
+      strings: ['Test'],
+      speed: { type: 50, delete: 50, delay: 1000 },
+      loop: false,
+      autoStart: false,
+      cursor: {
+        text: '|',
+        color: 'black',
+        blinkSpeed: 530,
+        opacity: { min: 0, max: 1 },
+        style: CursorStyle.Blink,
+        blink: true,
+      },
+      pauseFor: 1500,
+      direction: Direction.LTR,
+      easingFunction: (t) => t,
+      html: false,
+      textEffect: TextEffect.None,
+    };
+
+    render(<TypecraftFX {...options} />);
+
+    expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), options);
+    expect(mockTypecraft.start).not.toHaveBeenCalled();
   });
 });
