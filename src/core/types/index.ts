@@ -100,6 +100,8 @@ export enum QueueActionType {
   TYPE_HTML_TAG_OPEN = 'typeHtmlTagOpen',
   TYPE_HTML_TAG_CLOSE = 'typeHtmlTagClose',
   TYPE_HTML_CONTENT = 'typeHtmlContent',
+  WORD_REPLACE_START = 'wordReplaceStart',
+  WORD_REPLACE_END = 'wordReplaceEnd',
 }
 
 export interface QueueItem {
@@ -163,6 +165,8 @@ export type TypecraftEvent =
   | 'deleteSkipped'
   | 'pauseStart'
   | 'pauseEnd'
-  | 'complete';
+  | 'complete'
+  | 'wordReplaceStart'
+  | 'wordReplaceEnd';
 
 export type EventCallback = (...args: any[]) => void;

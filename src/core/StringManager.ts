@@ -23,6 +23,10 @@ export class StringManager {
     }
   }
 
+  public typeWord(word: string): void {
+    this.typeString(` ${word}`, false);
+  }
+
   private parseSpecialCharacters(string: string): string[] {
     return string.split('').map((char) => {
       if (char === '\n') {

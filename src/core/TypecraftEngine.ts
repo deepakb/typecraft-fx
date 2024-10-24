@@ -500,7 +500,7 @@ export class TypecraftEngine {
     const state = this.stateManager.getState();
 
     this.options.strings.forEach((string, index) => {
-      this.stringManager.typeString(string, this.options.html);
+      this.typeString(string);
 
       if (index !== this.options.strings.length - 1) {
         this.pauseFor(this.options.pauseFor);
@@ -517,6 +517,36 @@ export class TypecraftEngine {
 
   public registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this {
     this.EffectManager.registerCustomEffect(name, effectFunction);
+    return this;
+  }
+
+  public typeString(string: string): this {
+    this.stringManager.typeString(string, this.options.html);
+    return this;
+  }
+
+  public deleteChars(numChars: number): this {
+    for (let i = 0; i < numChars; i++) {
+      this.queueManager.add({
+        type: QueueActionType.DELETE_CHARACTER,
+        payload: {},
+      });
+    }
+    return this;
+  }
+
+  public typeAndReplace(words: string[], delay: number = 1000): this {
+    const typeWord = (index: number) => {
+      this.stringManager.typeWord(words[index]);
+      this.pauseFor(delay);
+      this.deleteChars(words[index].length + 1); // +1 for the space
+      this.callFunction(() => {
+        const nextIndex = (index + 1) % words.length;
+        typeWord(nextIndex);
+      });
+    };
+
+    typeWord(0);
     return this;
   }
 }

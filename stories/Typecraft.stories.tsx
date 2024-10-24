@@ -286,7 +286,6 @@ export const CallbackFunctions = {
     onInit: (instance: TypecraftEngine) => {
       instance.on('complete', () => {
         console.log('Typing completed!');
-        alert('Typing completed!');
       });
     },
   },
@@ -303,5 +302,26 @@ export const EmojisAndSpecialCharacters = {
   args: {
     ...Default.args,
     strings: ['Emojis 😊🎉🚀', '\nSpecial characters: àáâãäå', '\nSymbols: ©®™℠'],
+  },
+};
+
+export const DynamicWordReplacement = {
+  args: {
+    ...Default.args,
+    strings: ['The weather today is'],
+    speed: { type: 50, delete: 30, delay: 1000 },
+    loop: false,
+    onInit: (instance: TypecraftEngine) => {
+      const words = ['sunny', 'rainy', 'cloudy'];
+      instance.typeString('The weather today is').typeAndReplace(words, 2000);
+
+      instance.on('wordReplaceStart', (word) => {
+        console.log(`Started replacing with: ${word}`);
+      });
+
+      instance.on('wordReplaceEnd', (word) => {
+        console.log(`Finished replacing with: ${word}`);
+      });
+    },
   },
 };
