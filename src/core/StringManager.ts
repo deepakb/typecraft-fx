@@ -1,30 +1,53 @@
 import { QueueManager } from './QueueManager';
 import { QueueActionType } from './types';
+import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
+import { logger } from './TypecraftLogger';
 
 export class StringManager {
   private queueManager: QueueManager;
 
   constructor(queueManager: QueueManager) {
     this.queueManager = queueManager;
+    logger.debug('StringManager initialized');
   }
 
   typeString(string: string, htmlEnabled: boolean): void {
-    if (htmlEnabled) {
-      const nodes = this.parseHTML(string);
-      this.typeNodes(nodes);
-    } else {
-      const characters = this.parseSpecialCharacters(string);
-      for (const char of characters) {
-        this.queueManager.add({
-          type: QueueActionType.TYPE_CHARACTER,
-          payload: { char },
-        });
+    try {
+      if (htmlEnabled) {
+        const nodes = this.parseHTML(string);
+        this.typeNodes(nodes);
+      } else {
+        const characters = this.parseSpecialCharacters(string);
+        for (const char of characters) {
+          this.queueManager.add({
+            type: QueueActionType.TYPE_CHARACTER,
+            payload: { char },
+          });
+        }
       }
+      logger.debug('String queued for typing', { stringLength: string.length, htmlEnabled });
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Failed to queue string for typing',
+        ErrorSeverity.HIGH,
+        { originalError: error, string, htmlEnabled }
+      );
     }
   }
 
   public typeWord(word: string): void {
-    this.typeString(` ${word}`, false);
+    try {
+      this.typeString(` ${word}`, false);
+      logger.debug('Word queued for typing', { word });
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Failed to queue word for typing',
+        ErrorSeverity.HIGH,
+        { originalError: error, word }
+      );
+    }
   }
 
   private parseSpecialCharacters(string: string): string[] {
@@ -40,9 +63,18 @@ export class StringManager {
   }
 
   private parseHTML(html: string): Node[] {
-    const template = document.createElement('template');
-    template.innerHTML = html;
-    return Array.from(template.content.childNodes);
+    try {
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      return Array.from(template.content.childNodes);
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.INVALID_INPUT,
+        'Failed to parse HTML',
+        ErrorSeverity.HIGH,
+        { originalError: error, html }
+      );
+    }
   }
 
   private typeNodes(nodes: Node[]): void {
@@ -87,12 +119,32 @@ export class StringManager {
   }
 
   public deleteChars(numChars: number): void {
-    for (let i = 0; i < numChars; i++) {
-      this.queueManager.add({ type: QueueActionType.DELETE_CHARACTER, payload: {} });
+    try {
+      for (let i = 0; i < numChars; i++) {
+        this.queueManager.add({ type: QueueActionType.DELETE_CHARACTER, payload: {} });
+      }
+      logger.debug('Characters queued for deletion', { numChars });
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Failed to queue characters for deletion',
+        ErrorSeverity.HIGH,
+        { originalError: error, numChars }
+      );
     }
   }
 
   public deleteAll(visibleNodesLength: number): void {
-    this.deleteChars(visibleNodesLength);
+    try {
+      this.deleteChars(visibleNodesLength);
+      logger.debug('All characters queued for deletion', { visibleNodesLength });
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Failed to queue all characters for deletion',
+        ErrorSeverity.HIGH,
+        { originalError: error, visibleNodesLength }
+      );
+    }
   }
 }

@@ -20,6 +20,8 @@ import { StateManager } from './StateManager';
 import { StringManager } from './StringManager';
 import { SpeedManager } from './SpeedManager';
 import { EasingManager } from './EasingManager';
+import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
+import { logger } from './TypecraftLogger';
 
 export class TypecraftEngine {
   private options: TypecraftOptions;
@@ -35,16 +37,30 @@ export class TypecraftEngine {
   private lastFrameTime: number = 0;
 
   constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
-    const htmlElement = typeof element === 'string' ? document.querySelector(element)! : element;
-    this.optionsManager = new OptionsManager(htmlElement as HTMLElement, options);
-    this.options = this.optionsManager.getOptions();
-    this.stateManager = new StateManager(htmlElement as HTMLElement, this.options);
-    this.queueManager = new QueueManager();
-    this.EffectManager = new EffectManager();
-    this.stringManager = new StringManager(this.queueManager);
-    this.speedManager = new SpeedManager(this.options);
-    this.easingManager = new EasingManager(this.options);
-    this.init();
+    try {
+      const htmlElement = typeof element === 'string' ? document.querySelector(element)! : element;
+      this.optionsManager = new OptionsManager(htmlElement as HTMLElement, options);
+      this.options = this.optionsManager.getOptions();
+      this.stateManager = new StateManager(htmlElement as HTMLElement, this.options);
+      this.queueManager = new QueueManager();
+      this.EffectManager = new EffectManager();
+      this.stringManager = new StringManager(this.queueManager);
+      this.speedManager = new SpeedManager(this.options);
+      this.easingManager = new EasingManager(this.options);
+      this.init();
+      logger.info('TypecraftEngine initialized', { element, options });
+    } catch (error) {
+      if (error instanceof TypecraftError) {
+        throw error;
+      } else {
+        throw new TypecraftError(
+          ErrorCode.INITIALIZATION_ERROR,
+          'Failed to initialize TypecraftEngine',
+          ErrorSeverity.HIGH,
+          { originalError: error }
+        );
+      }
+    }
   }
 
   private init(): void {
@@ -54,9 +70,9 @@ export class TypecraftEngine {
     this.setupCursor();
 
     if (this.options.autoStart && this.options.strings.length) {
-      this.typeAllStrings();
-      this.startAnimationLoop();
+      this.start();
     }
+    logger.debug('TypecraftEngine initialized');
   }
 
   private startAnimationLoop(): void {
@@ -65,17 +81,17 @@ export class TypecraftEngine {
         this.lastFrameTime = currentTime;
       }
 
-      const deltaTime = currentTime - this.lastFrameTime;
-      this.update(deltaTime, currentTime);
+      this.update(currentTime);
 
       this.lastFrameTime = currentTime;
       this.rafId = window.requestAnimationFrame(animate);
     };
 
     this.rafId = window.requestAnimationFrame(animate);
+    logger.debug('Animation loop started');
   }
 
-  private update(deltaTime: number, currentTime: number): void {
+  private update(currentTime: number): void {
     // Update cursor blink
     this.cursorManager.updateBlink(currentTime);
 
@@ -97,6 +113,7 @@ export class TypecraftEngine {
     if (this.options.cursor.blink) {
       this.cursorManager.startBlinking();
     }
+    logger.debug('Cursor setup completed');
   }
 
   private updateCursorStyle(): void {
@@ -106,6 +123,7 @@ export class TypecraftEngine {
       cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.cursor.style}`;
       cursorNode.style.color = this.options.cursor.color;
     }
+    logger.debug('Cursor style updated');
   }
 
   private resetState(): void {
@@ -117,6 +135,7 @@ export class TypecraftEngine {
     }
     this.cursorManager = new CursorManager(state.element, this.options.cursor);
     this.cursorManager.updateCursorPosition(state.element);
+    logger.debug('State reset');
   }
 
   private emit(eventName: TypecraftEvent, ...args: any[]): void {
@@ -124,10 +143,12 @@ export class TypecraftEngine {
     if (listeners) {
       listeners.forEach((callback) => callback(...args));
     }
+    logger.debug('Event emitted', { eventName, args });
   }
 
   private addToQueue(actionType: QueueActionType, payload?: any): void {
     this.queueManager.add({ type: actionType, payload });
+    logger.debug('Action added to queue', { actionType, payload });
   }
 
   private async runQueue(): Promise<void> {
@@ -137,53 +158,62 @@ export class TypecraftEngine {
         this.emit('complete');
         if (this.options.loop) {
           this.typeAllStrings();
+          continue;
         } else {
           this.checkOperationComplete();
+          break;
         }
-        break;
       }
 
       const { type, payload } = queueItem;
       this.stateManager.updateLastOperation(type);
 
-      switch (type) {
-        case QueueActionType.TYPE:
-        case QueueActionType.TYPE_CHARACTER:
-          await this.typeCharacter(payload);
-          break;
-        case QueueActionType.TYPE_HTML_TAG_OPEN:
-          await this.typeHtmlTagOpen(payload);
-          break;
-        case QueueActionType.TYPE_HTML_CONTENT:
-          await this.typeHtmlContent(payload.content);
-          break;
-        case QueueActionType.TYPE_HTML_TAG_CLOSE:
-          await this.typeHtmlTagClose(payload);
-          break;
-        case QueueActionType.DELETE:
-        case QueueActionType.DELETE_CHARACTER:
-          const state = this.stateManager.getState();
-          if (state.visibleNodes.length > 0) {
-            await this.deleteCharacter();
-          } else {
-            this.emit('deleteSkipped');
-          }
-          break;
-        case QueueActionType.PAUSE:
-          await this.wait(payload.ms);
-          break;
-        case QueueActionType.CALLBACK:
-        case QueueActionType.CALL_FUNCTION:
-          if (typeof payload.callback === 'function') {
-            await Promise.resolve(payload.callback());
-          }
-          break;
-        case QueueActionType.LOOP:
-          this.typeAllStrings();
-          this.emit('complete');
-          break;
-        default:
-          console.warn(`Unknown queue action type: ${type}`);
+      try {
+        switch (type) {
+          case QueueActionType.TYPE:
+          case QueueActionType.TYPE_CHARACTER:
+            await this.typeCharacter(payload);
+            break;
+          case QueueActionType.TYPE_HTML_TAG_OPEN:
+            await this.typeHtmlTagOpen(payload);
+            break;
+          case QueueActionType.TYPE_HTML_CONTENT:
+            await this.typeHtmlContent(payload.content);
+            break;
+          case QueueActionType.TYPE_HTML_TAG_CLOSE:
+            await this.typeHtmlTagClose(payload);
+            break;
+          case QueueActionType.DELETE:
+          case QueueActionType.DELETE_CHARACTER:
+            const state = this.stateManager.getState();
+            if (state.visibleNodes.length > 0) {
+              await this.deleteCharacter();
+            } else {
+              this.emit('deleteSkipped');
+            }
+            break;
+          case QueueActionType.PAUSE:
+            await this.wait(payload.ms);
+            break;
+          case QueueActionType.CALLBACK:
+          case QueueActionType.CALL_FUNCTION:
+            if (typeof payload.callback === 'function') {
+              await Promise.resolve(payload.callback());
+            }
+            break;
+          case QueueActionType.LOOP:
+            this.typeAllStrings();
+            break;
+          default:
+            logger.warn(`Unknown queue action type: ${type}`);
+        }
+      } catch (error) {
+        throw new TypecraftError(
+          ErrorCode.RUNTIME_ERROR,
+          'Error processing queue item',
+          ErrorSeverity.HIGH,
+          { originalError: error, queueItem }
+        );
       }
     }
   }
@@ -339,28 +369,48 @@ export class TypecraftEngine {
 
   private async deleteCharacter(): Promise<void> {
     const state = this.stateManager.getState();
-    if (state.visibleNodes.length > 0) {
-      const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+    logger.debug('Current state:', state);
+
+    if (!state.visibleNodes || state.visibleNodes.length === 0) {
+      logger.warn('No visible nodes to delete');
+      return;
+    }
+
+    const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+    logger.debug('Last node:', lastNode);
+
+    try {
       if (lastNode.type === NodeType.Character) {
         const span = lastNode.node as HTMLElement;
         const text = span.textContent || '';
         if (text.length > 1) {
           span.textContent = text.slice(0, -1);
+          logger.debug('Character deleted from span');
         } else {
           this.stateManager.removeLastVisibleNode();
           span.parentNode?.removeChild(span);
+          logger.debug('Span removed');
         }
       } else {
         this.stateManager.removeLastVisibleNode();
         lastNode.node.parentNode?.removeChild(lastNode.node);
+        logger.debug('Non-character node removed');
       }
+
+      // Always update cursor position, even if no node was removed
       this.cursorManager.updateCursorPosition(state.element);
+      logger.debug('Cursor position updated');
+
       const deleteSpeed =
         typeof this.options.speed === 'number'
           ? this.options.speed
           : this.options.speed.delete || 50;
       await this.wait(deleteSpeed);
       this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
+      logger.debug('Delete character operation completed');
+    } catch (error) {
+      // logger.error('Error in deleteCharacter:', error);
+      throw error; // Re-throw the error to make the test fail if there's an unexpected error
     }
   }
 
@@ -457,16 +507,26 @@ export class TypecraftEngine {
   }
 
   public start(): Promise<void> {
-    this.resetState();
-    this.updateCursorStyle();
-    const state = this.stateManager.getState();
-    if (this.options.strings.length && !state.queue.length) {
-      this.typeAllStrings();
+    try {
+      this.resetState();
+      this.updateCursorStyle();
+      const state = this.stateManager.getState();
+      if (this.options.strings.length && !state.queue.length) {
+        this.typeAllStrings();
+      }
+      if (!this.rafId) {
+        this.startAnimationLoop();
+      }
+      logger.info('TypecraftEngine started');
+      return this.runQueue();
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Failed to start TypecraftEngine',
+        ErrorSeverity.HIGH,
+        { originalError: error }
+      );
     }
-    if (!this.rafId) {
-      this.startAnimationLoop();
-    }
-    return this.runQueue();
   }
 
   public stop(): void {
@@ -475,6 +535,7 @@ export class TypecraftEngine {
       this.rafId = null;
     }
     this.queueManager.clear();
+    logger.info('TypecraftEngine stopped');
   }
 
   public on(eventName: TypecraftEvent, callback: EventCallback): this {

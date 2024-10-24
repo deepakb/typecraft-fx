@@ -1,13 +1,21 @@
 import { fn } from '@storybook/test';
 import { TypecraftFX, Direction, CursorStyle, TextEffect, TypecraftEngine } from '../src';
+import { Meta, StoryObj } from '@storybook/react';
 
-export const ActionsData = {
+// Define a type for the actions
+type ActionData = {
+  onInit: ReturnType<typeof fn>;
+  onComplete: ReturnType<typeof fn>;
+  onTypeStart: ReturnType<typeof fn>;
+};
+
+export const ActionsData: ActionData = {
   onInit: fn(),
   onComplete: fn(),
   onTypeStart: fn(),
 };
 
-export default {
+const meta: Meta<typeof TypecraftFX> = {
   component: TypecraftFX,
   title: 'TypecraftFX',
   tags: ['autodocs'],
@@ -24,8 +32,8 @@ export default {
     loop: { control: 'boolean' },
     autoStart: { control: 'boolean' },
     pauseFor: { control: 'number' },
-    direction: { control: { type: 'select', options: Direction } },
-    textEffect: { control: { type: 'select', options: TextEffect } },
+    direction: { control: { type: 'select', options: Object.values(Direction) } },
+    textEffect: { control: { type: 'select', options: Object.values(TextEffect) } },
     html: { control: 'boolean' },
     cursor: {
       control: 'object',
@@ -34,7 +42,10 @@ export default {
   },
 };
 
-export const Default = {
+export default meta;
+type Story = StoryObj<typeof TypecraftFX>;
+
+export const Default: Story = {
   args: {
     strings: ['Welcome to TypecraftFX', 'A powerful typing animation library'],
     speed: { type: 50, delete: 50, delay: 1000 },
@@ -43,7 +54,7 @@ export const Default = {
   },
 };
 
-export const LoopingText = {
+export const LoopingText: Story = {
   args: {
     ...Default.args,
     strings: ['First string', 'Second string', 'Third string'],
@@ -52,7 +63,7 @@ export const LoopingText = {
   },
 };
 
-export const CustomCursor = {
+export const CustomCursor: Story = {
   args: {
     ...Default.args,
     strings: ['Custom cursor example'],
@@ -67,7 +78,7 @@ export const CustomCursor = {
   },
 };
 
-export const RTLText = {
+export const RTLText: Story = {
   args: {
     ...Default.args,
     strings: ['مرحبا بكم في TypecraftFX', 'مكتبة رسوم متحركة قوية للكتابة'],
@@ -75,7 +86,7 @@ export const RTLText = {
   },
 };
 
-export const HTMLContent = {
+export const HTMLContent: Story = {
   args: {
     ...Default.args,
     strings: [
@@ -87,7 +98,7 @@ export const HTMLContent = {
   },
 };
 
-export const TextEffectFadeIn = {
+export const TextEffectFadeIn: Story = {
   args: {
     ...Default.args,
     strings: ['This text fades in'],
@@ -95,7 +106,7 @@ export const TextEffectFadeIn = {
   },
 };
 
-export const TextEffectSlideIn = {
+export const TextEffectSlideIn: Story = {
   args: {
     ...Default.args,
     strings: ['This text slides in'],
@@ -103,7 +114,7 @@ export const TextEffectSlideIn = {
   },
 };
 
-export const TextEffectGlitch = {
+export const TextEffectGlitch: Story = {
   args: {
     ...Default.args,
     strings: ['This text has a glitch effect'],
@@ -111,7 +122,7 @@ export const TextEffectGlitch = {
   },
 };
 
-export const TextEffectTypecraft = {
+export const TextEffectTypecraft: Story = {
   args: {
     ...Default.args,
     strings: ['Typecraft effect in action'],
@@ -119,7 +130,7 @@ export const TextEffectTypecraft = {
   },
 };
 
-export const TextEffectRainbow = {
+export const TextEffectRainbow: Story = {
   args: {
     ...Default.args,
     strings: ['Rainbow colored text'],
@@ -127,7 +138,7 @@ export const TextEffectRainbow = {
   },
 };
 
-export const TextEffectContinuous = {
+export const TextEffectContinuous: Story = {
   args: {
     ...Default.args,
     strings: ['Continuous colored text'],
@@ -135,7 +146,7 @@ export const TextEffectContinuous = {
   },
 };
 
-export const DifferentSpeeds = {
+export const DifferentSpeeds: Story = {
   args: {
     ...Default.args,
     strings: ['Fast typing', 'Slow typing', 'Normal speed'],
@@ -143,7 +154,7 @@ export const DifferentSpeeds = {
   },
 };
 
-export const LongPauseBetweenStrings = {
+export const LongPauseBetweenStrings: Story = {
   args: {
     ...Default.args,
     strings: ['First string', 'Long pause', 'Third string'],
@@ -151,7 +162,7 @@ export const LongPauseBetweenStrings = {
   },
 };
 
-export const NoAutoStart = {
+export const NoAutoStart: Story = {
   args: {
     ...Default.args,
     strings: ["This won't start automatically", 'You need to call .start()'],
@@ -159,7 +170,7 @@ export const NoAutoStart = {
   },
 };
 
-export const CursorStyleSolid = {
+export const CursorStyleSolid: Story = {
   args: {
     ...Default.args,
     strings: ['Solid cursor style'],
@@ -174,7 +185,7 @@ export const CursorStyleSolid = {
   },
 };
 
-export const CursorStyleBlink = {
+export const CursorStyleBlink: Story = {
   args: {
     ...Default.args,
     strings: ['Blinking cursor style'],
@@ -189,7 +200,7 @@ export const CursorStyleBlink = {
   },
 };
 
-export const CursorStyleSmooth = {
+export const CursorStyleSmooth: Story = {
   args: {
     ...Default.args,
     strings: ['Smooth cursor style'],
@@ -204,7 +215,7 @@ export const CursorStyleSmooth = {
   },
 };
 
-export const CustomCursorColor = {
+export const CustomCursorColor: Story = {
   args: {
     ...Default.args,
     strings: ['Custom cursor color'],
@@ -219,7 +230,7 @@ export const CustomCursorColor = {
   },
 };
 
-export const CustomCursorOpacity = {
+export const CustomCursorOpacity: Story = {
   args: {
     ...Default.args,
     strings: ['Custom cursor opacity'],
@@ -234,7 +245,7 @@ export const CustomCursorOpacity = {
   },
 };
 
-export const ComplexChaining = {
+export const ComplexChaining: Story = {
   args: {
     ...Default.args,
     strings: [
@@ -251,7 +262,7 @@ export const ComplexChaining = {
   },
 };
 
-export const DynamicSpeedChange = {
+export const DynamicSpeedChange: Story = {
   args: {
     ...Default.args,
     strings: [
@@ -267,7 +278,7 @@ export const DynamicSpeedChange = {
   },
 };
 
-export const MixedHTMLAndPlainText = {
+export const MixedHTMLAndPlainText: Story = {
   args: {
     ...Default.args,
     strings: [
@@ -279,7 +290,7 @@ export const MixedHTMLAndPlainText = {
   },
 };
 
-export const CallbackFunctions = {
+export const CallbackFunctions: Story = {
   args: {
     ...Default.args,
     strings: ['This string has a callback at the end.'],
@@ -291,21 +302,21 @@ export const CallbackFunctions = {
   },
 };
 
-export const MultilineText = {
+export const MultilineText: Story = {
   args: {
     ...Default.args,
     strings: ['This is a multiline\ntext example.\nIt should work correctly.'],
   },
 };
 
-export const EmojisAndSpecialCharacters = {
+export const EmojisAndSpecialCharacters: Story = {
   args: {
     ...Default.args,
     strings: ['Emojis 😊🎉🚀', '\nSpecial characters: àáâãäå', '\nSymbols: ©®™℠'],
   },
 };
 
-export const DynamicWordReplacement = {
+export const DynamicWordReplacement: Story = {
   args: {
     ...Default.args,
     strings: ['The weather today is'],

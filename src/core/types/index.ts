@@ -52,7 +52,7 @@ export type EasingFunction = (t: number) => number;
 
 export interface TypecraftOptions {
   strings: string[];
-  speed: SpeedOptions | number;
+  speed: SpeedOptions;
   loop: boolean;
   autoStart: boolean;
   cursor: CursorOptions;

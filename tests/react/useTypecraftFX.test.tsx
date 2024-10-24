@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, act } from '@testing-library/react';
+import { render, act, renderHook } from '@testing-library/react';
 import { useTypecraftFX } from '../../src/react/useTypecraftFX';
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
 import { vi, expect, it, describe, beforeEach } from 'vitest';
@@ -18,19 +18,36 @@ describe('useTypecraftFX', () => {
   });
 
   it('should initialize TypecraftEngine when element is set', () => {
-    render(<TestComponent />);
+    const { result } = renderHook(() => useTypecraftFX());
+
+    const divElement = document.createElement('div');
+    act(() => {
+      result.current.setElement(divElement);
+    });
+
     expect(TypecraftEngine).toHaveBeenCalledWith(
-      expect.any(HTMLDivElement),
+      divElement,
       expect.objectContaining({
-        autoStart: false,
-        cursor: expect.any(Object),
+        autoStart: true,
+        cursor: expect.objectContaining({
+          blink: true,
+          blinkSpeed: 500,
+          color: 'black',
+          opacity: { min: 0, max: 1 },
+          style: 'solid',
+          text: '|',
+        }),
         direction: 'ltr',
         easingFunction: expect.any(Function),
         html: false,
         loop: false,
-        pauseFor: expect.any(Number),
-        speed: expect.any(Number),
-        strings: expect.any(Array),
+        pauseFor: 1500,
+        speed: {
+          delay: 1500,
+          delete: 40,
+          type: 50,
+        },
+        strings: ['Welcome to TypecraftFX'],
         textEffect: 'none',
       })
     );

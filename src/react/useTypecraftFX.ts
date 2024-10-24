@@ -18,17 +18,17 @@ export interface UseTypecraftFXProps {
 }
 
 const defaultOptions: TypecraftOptions = {
-  strings: [],
-  speed: 50,
+  strings: ['Welcome to TypecraftFX'],
+  speed: { type: 50, delete: 40, delay: 1500 },
   loop: false,
-  autoStart: false,
+  autoStart: true,
   cursor: {
     text: '|',
     color: 'black',
     blinkSpeed: 500,
     opacity: { min: 0, max: 1 },
     style: CursorStyle.Solid,
-    blink: false,
+    blink: true,
   },
   pauseFor: 1500,
   direction: Direction.LTR,
@@ -38,7 +38,7 @@ const defaultOptions: TypecraftOptions = {
 };
 
 export function useTypecraftFX({
-  options,
+  options = {},
   onInit,
   onTypeStart,
   onTypeChar,
@@ -59,8 +59,9 @@ export function useTypecraftFX({
     ...options,
     cursor: {
       ...defaultOptions.cursor,
-      ...options?.cursor,
+      ...options.cursor,
     },
+    speed: { ...defaultOptions.speed, ...options.speed },
   };
 
   useEffect(() => {

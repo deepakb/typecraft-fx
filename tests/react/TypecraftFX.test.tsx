@@ -139,20 +139,20 @@ describe('TypecraftFX', () => {
     const options: TypecraftOptions = {
       strings: ['Test'],
       speed: { type: 50, delete: 50, delay: 1000 },
-      loop: false,
       autoStart: false,
       cursor: {
-        text: '|',
-        color: 'black',
+        blink: true,
         blinkSpeed: 530,
+        color: 'black',
         opacity: { min: 0, max: 1 },
         style: CursorStyle.Blink,
-        blink: true,
+        text: '|',
       },
-      pauseFor: 1500,
-      direction: Direction.LTR,
-      easingFunction: (t) => t,
+      easingFunction: expect.any(Function),
       html: false,
+      pauseFor: 1500,
+      loop: false,
+      direction: Direction.LTR,
       textEffect: TextEffect.None,
     };
 

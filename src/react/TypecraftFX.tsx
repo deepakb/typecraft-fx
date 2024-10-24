@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
-import { TypecraftOptions } from '../core/types';
+import { Direction, TextEffect, TypecraftOptions } from '../core/types';
+import { ErrorCode, TypecraftError } from '../core/TypecraftError';
+import { logger } from '../core/TypecraftLogger';
 
 export interface TypecraftFXProps extends TypecraftOptions {
   className?: string;
@@ -33,8 +35,13 @@ export interface TypecraftFXRef {
 
 export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, ref) => {
   const {
-    className,
-    style,
+    className = 'typecraft-fx',
+    style = {},
+    autoStart = true,
+    speed = { type: 50, delete: 40, delay: 1500 },
+    textEffect = TextEffect.None,
+    direction = Direction.LTR,
+    loop = false,
     onInit,
     onTypeStart,
     onTypeChar,
@@ -58,31 +65,39 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
 
   useEffect(() => {
     if (elementRef.current) {
-      engineRef.current = new TypecraftEngine(elementRef.current, options);
-      if (onInit) {
-        onInit(engineRef.current);
-      }
-
-      const eventHandlers: { [key: string]: ((arg?: any) => void) | undefined } = {
-        typeStart: onTypeStart,
-        typeChar: onTypeChar,
-        typeComplete: onTypeComplete,
-        deleteStart: onDeleteStart,
-        deleteChar: onDeleteChar,
-        deleteComplete: onDeleteComplete,
-        pauseStart: onPauseStart,
-        pauseEnd: onPauseEnd,
-        complete: onComplete,
-      };
-
-      Object.entries(eventHandlers).forEach(([event, handler]) => {
-        if (handler) {
-          engineRef.current?.on(event as any, handler);
+      try {
+        engineRef.current = new TypecraftEngine(elementRef.current, options);
+        if (onInit) {
+          onInit(engineRef.current);
         }
-      });
 
-      if (options.autoStart) {
-        engineRef.current.start();
+        const eventHandlers: { [key: string]: ((arg?: any) => void) | undefined } = {
+          typeStart: onTypeStart,
+          typeChar: onTypeChar,
+          typeComplete: onTypeComplete,
+          deleteStart: onDeleteStart,
+          deleteChar: onDeleteChar,
+          deleteComplete: onDeleteComplete,
+          pauseStart: onPauseStart,
+          pauseEnd: onPauseEnd,
+          complete: onComplete,
+        };
+
+        Object.entries(eventHandlers).forEach(([event, handler]) => {
+          if (handler) {
+            engineRef.current?.on(event as any, handler);
+          }
+        });
+
+        if (autoStart) {
+          engineRef.current.start();
+        }
+      } catch (error) {
+        if (error instanceof TypecraftError) {
+          logger.error(error.code, error.message, error.details);
+        } else {
+          logger.error(ErrorCode.RUNTIME_ERROR, 'Unexpected error in TypecraftFX:', error as any);
+        }
       }
     }
 

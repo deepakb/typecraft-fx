@@ -1,4 +1,6 @@
 import { EasingFunction, TypecraftOptions } from './types';
+import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
+import { logger } from './TypecraftLogger';
 
 export class EasingManager {
   private options: TypecraftOptions;
@@ -12,11 +14,38 @@ export class EasingManager {
     return this.options.easingFunction || this.defaultEasing;
   }
 
-  public setEasingFunction(easing: EasingFunction): void {
-    this.options.easingFunction = easing;
+  public setEasingFunction(easingFunction: EasingFunction): void {
+    if (typeof easingFunction !== 'function') {
+      throw new TypecraftError(
+        ErrorCode.INVALID_OPTIONS,
+        'Invalid easing function',
+        ErrorSeverity.HIGH,
+        {
+          easingFunction,
+        }
+      );
+    }
+    this.options.easingFunction = easingFunction;
+    logger.info('Easing function set successfully');
   }
 
   public applyEasing(value: number): number {
-    return this.getEasing()(value);
+    if (typeof value !== 'number' || isNaN(value)) {
+      throw new TypecraftError(ErrorCode.INVALID_INPUT, 'Invalid input value', ErrorSeverity.HIGH, {
+        value,
+      });
+    }
+    try {
+      return this.getEasing()(value);
+    } catch (error) {
+      throw new TypecraftError(
+        ErrorCode.RUNTIME_ERROR,
+        'Error applying easing',
+        ErrorSeverity.HIGH,
+        {
+          originalError: error,
+        }
+      );
+    }
   }
 }
