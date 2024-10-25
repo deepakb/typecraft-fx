@@ -32,7 +32,7 @@ export class EffectManager {
     effect: TextEffect | string,
     node: HTMLElement,
     index: number,
-    getTypeSpeed: () => number,
+    speed: number,
     easingManager: EasingManager,
     color?: string
   ): Promise<void> {
@@ -65,7 +65,7 @@ export class EffectManager {
             this.applyGlitchEffect(node, index, resolve, easingManager);
             break;
           case TextEffect.Typecraft:
-            this.applyTypecraftEffect(node, index, getTypeSpeed, resolve, easingManager);
+            this.applyTypecraftEffect(node, index, speed, resolve, easingManager);
             break;
           case TextEffect.Rainbow:
             this.applyRainbowEffect(node, index, resolve);
@@ -80,7 +80,7 @@ export class EffectManager {
           default:
             if (typeof effect === 'string' && this.customEffects.has(effect)) {
               const customEffect = this.customEffects.get(effect)!;
-              customEffect(node, index, getTypeSpeed, easingManager);
+              customEffect(node, index, speed, easingManager);
               resolve();
             } else {
               reject(
@@ -196,13 +196,12 @@ export class EffectManager {
   private applyTypecraftEffect(
     node: HTMLElement,
     index: number,
-    getTypeSpeed: () => number,
+    speed: number,
     resolve: () => void,
     easingManager: EasingManager
   ): void {
     node.style.visibility = 'hidden';
-    const typeSpeed = getTypeSpeed();
-    const easedDelay = easingManager.applyEasing(index) * typeSpeed;
+    const easedDelay = easingManager.applyEasing(index) * speed;
     setTimeout(() => {
       node.style.visibility = 'visible';
       resolve();

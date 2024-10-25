@@ -45,7 +45,7 @@ export class StateManager {
       lastFrameTime: null,
       pauseUntil: null,
       cursorNode: null,
-      currentSpeed: typeof options.speed === 'number' ? options.speed : 'natural',
+      currentSpeed: options.speed.type,
       eventQueue: [],
       eventListeners: new Map(),
       cursorBlinkState: true,

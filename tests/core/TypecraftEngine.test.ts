@@ -4,7 +4,6 @@ import {
   Direction,
   TextEffect,
   QueueActionType,
-  NodeType,
   EasingFunction,
   CursorStyle,
 } from '../../src/core/types';
@@ -252,7 +251,7 @@ describe('TypecraftEngine', () => {
 
       const engine = new TypecraftEngine(testElement, {
         strings: ['Test'],
-        speed: 50,
+        speed: { type: 50, delete: 50, delay: 0 },
         loop: false,
         autoStart: false,
         textEffect: TextEffect.None, // Disable text effects for this test

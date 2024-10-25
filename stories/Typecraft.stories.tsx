@@ -1,28 +1,26 @@
-import { fn } from '@storybook/test';
-import { TypecraftFX, Direction, CursorStyle, TextEffect, TypecraftEngine } from '../src';
+import React from 'react';
+import {
+  TypecraftFX as TypecraftFXImport,
+  Direction,
+  CursorStyle,
+  TextEffect,
+  TypecraftEngine,
+} from '../src';
 import { Meta, StoryObj } from '@storybook/react';
 
-// Define a type for the actions
-type ActionData = {
-  onInit: ReturnType<typeof fn>;
-  onComplete: ReturnType<typeof fn>;
-  onTypeStart: ReturnType<typeof fn>;
-};
+const TypecraftFX = React.lazy(TypecraftFXImport);
 
-export const ActionsData: ActionData = {
-  onInit: fn(),
-  onComplete: fn(),
-  onTypeStart: fn(),
-};
+const TypecraftFXWrapper = (props: React.ComponentProps<typeof TypecraftFX>) => (
+  <React.Suspense fallback={<div>Loading...</div>}>
+    <TypecraftFX {...props} />
+  </React.Suspense>
+);
 
-const meta: Meta<typeof TypecraftFX> = {
-  component: TypecraftFX,
+const meta: Meta<typeof TypecraftFXWrapper> = {
+  component: TypecraftFXWrapper,
   title: 'TypecraftFX',
   tags: ['autodocs'],
   excludeStories: /.*Data$/,
-  args: {
-    ...ActionsData,
-  },
   argTypes: {
     strings: { control: 'object' },
     speed: {
@@ -43,7 +41,7 @@ const meta: Meta<typeof TypecraftFX> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof TypecraftFX>;
+type Story = StoryObj<typeof TypecraftFXWrapper>;
 
 export const Default: Story = {
   args: {
@@ -60,6 +58,25 @@ export const LoopingText: Story = {
     strings: ['First string', 'Second string', 'Third string'],
     loop: true,
     pauseFor: 1000,
+  },
+};
+
+export const DeleteCharsTest: Story = {
+  args: {
+    ...Default.args,
+    strings: [],
+    speed: { type: 50, delete: 30, delay: 1000 },
+    loop: false,
+    autoStart: false,
+    onInit: (instance: TypecraftEngine) => {
+      instance
+        .typeString('The quick brown fox')
+        .pauseFor(1000)
+        .deleteChars(9)
+        .pauseFor(500)
+        .typeString(' jumps over the lazy dog')
+        .start();
+    },
   },
 };
 
@@ -319,12 +336,21 @@ export const EmojisAndSpecialCharacters: Story = {
 export const DynamicWordReplacement: Story = {
   args: {
     ...Default.args,
-    strings: ['The weather today is'],
+    strings: [],
     speed: { type: 50, delete: 30, delay: 1000 },
     loop: false,
     onInit: (instance: TypecraftEngine) => {
       const words = ['sunny', 'rainy', 'cloudy'];
-      instance.typeString('The weather today is').typeAndReplace(words, 2000);
+      instance
+        .typeString(`The weather today is ${words[0]}`)
+        .pauseFor(1000)
+        .deleteChars(words[0].length)
+        .typeString(`${words[1]}`)
+        .pauseFor(2000)
+        .deleteChars(words[1].length)
+        .typeString(`${words[2]}`)
+        .pauseFor(2000)
+        .start();
 
       instance.on('wordReplaceStart', (word) => {
         console.log(`Started replacing with: ${word}`);

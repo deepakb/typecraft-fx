@@ -42,7 +42,7 @@ describe('OptionsManager', () => {
     it('should return merged options', () => {
       const customOptions: Partial<TypecraftOptions> = {
         strings: ['Test'],
-        speed: 100,
+        speed: { type: 100, delete: 100, delay: 1500 },
         loop: true,
         cursor: {
           text: '_',
@@ -65,7 +65,7 @@ describe('OptionsManager', () => {
       expect(result).toEqual(
         expect.objectContaining({
           strings: [],
-          speed: 50,
+          speed: { type: 50, delete: 50, delay: 1500 },
           pauseFor: 1500,
           loop: false,
           autoStart: false,

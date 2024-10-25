@@ -146,7 +146,7 @@ describe('StringManager', () => {
       stringManager.deleteChars(3);
       expect(mockQueueManager.add).toHaveBeenCalledTimes(3);
       expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.DELETE_CHARACTER,
+        type: QueueActionType.DELETE_CHARACTERS,
         payload: {},
       });
     });

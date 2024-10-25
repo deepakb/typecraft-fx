@@ -18,7 +18,7 @@ describe('StateManager', () => {
   beforeEach(() => {
     mockElement = document.createElement('div');
     mockOptions = {
-      speed: 50,
+      speed: { type: 50, delete: 50, delay: 1500 },
       strings: ['Test'],
       loop: false,
       autoStart: false,

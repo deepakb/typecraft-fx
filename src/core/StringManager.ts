@@ -121,7 +121,7 @@ export class StringManager {
   public deleteChars(numChars: number): void {
     try {
       for (let i = 0; i < numChars; i++) {
-        this.queueManager.add({ type: QueueActionType.DELETE_CHARACTER, payload: {} });
+        this.queueManager.add({ type: QueueActionType.DELETE_CHARACTERS, payload: {} });
       }
       logger.debug('Characters queued for deletion', { numChars });
     } catch (error) {

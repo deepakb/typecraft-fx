@@ -1,6 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
-import { TypecraftOptions, EventCallback, CursorStyle, Direction, TextEffect } from '../core/types';
+import {
+  TypecraftOptions,
+  EventCallback,
+  CursorStyle,
+  Direction,
+  TextEffect,
+  TypecraftEvent,
+} from '../core/types';
 
 export interface UseTypecraftFXProps {
   options?: Partial<TypecraftOptions>;
@@ -54,93 +61,70 @@ export function useTypecraftFX({
   const [element, setElement] = useState<HTMLDivElement | null>(null);
   const typecraftRef = useRef<TypecraftEngine | null>(null);
 
-  const mergedOptions = {
-    ...defaultOptions,
-    ...options,
-    cursor: {
-      ...defaultOptions.cursor,
-      ...options.cursor,
-    },
-    speed: { ...defaultOptions.speed, ...options.speed },
+  // Memoize options to prevent unnecessary re-renders and recalculations.
+  const mergedOptions = useMemo(
+    () => ({
+      ...defaultOptions,
+      ...options,
+      cursor: { ...defaultOptions.cursor, ...options.cursor },
+      speed: { ...defaultOptions.speed, ...options.speed },
+    }),
+    [options]
+  );
+
+  // Helper to attach event listeners
+  const attachEventListeners = (instance: TypecraftEngine) => {
+    const eventHandlers: Partial<Record<TypecraftEvent, EventCallback>> = {
+      typeStart: onTypeStart,
+      typeChar: onTypeChar,
+      typeComplete: onTypeComplete,
+      deleteStart: onDeleteStart,
+      deleteChar: onDeleteChar,
+      deleteComplete: onDeleteComplete,
+      deleteSkipped: onDeleteSkipped,
+      pauseStart: onPauseStart,
+      pauseEnd: onPauseEnd,
+      complete: onComplete,
+    };
+
+    Object.entries(eventHandlers).forEach(([event, handler]) => {
+      if (handler) {
+        instance.on(event as TypecraftEvent, handler);
+      }
+    });
+
+    return () => {
+      Object.entries(eventHandlers).forEach(([event, handler]) => {
+        if (handler) {
+          instance.off(event as TypecraftEvent, handler);
+        }
+      });
+    };
   };
 
   useEffect(() => {
-    if (element && !typecraftRef.current) {
-      const instance = new TypecraftEngine(element, mergedOptions);
-      typecraftRef.current = instance;
-
-      if (onInit) {
-        onInit(instance);
-      }
-
-      // Set up event listeners
-      if (onTypeStart) {
-        instance.on('typeStart', onTypeStart);
-      }
-      if (onTypeChar) {
-        instance.on('typeChar', onTypeChar);
-      }
-      if (onTypeComplete) {
-        instance.on('typeComplete', onTypeComplete);
-      }
-      if (onDeleteStart) {
-        instance.on('deleteStart', onDeleteStart);
-      }
-      if (onDeleteChar) {
-        instance.on('deleteChar', onDeleteChar);
-      }
-      if (onDeleteComplete) {
-        instance.on('deleteComplete', onDeleteComplete);
-      }
-      if (onDeleteSkipped) {
-        instance.on('deleteSkipped', onDeleteSkipped);
-      }
-      if (onPauseStart) {
-        instance.on('pauseStart', onPauseStart);
-      }
-      if (onPauseEnd) {
-        instance.on('pauseEnd', onPauseEnd);
-      }
-      if (onComplete) {
-        instance.on('complete', onComplete);
-      }
+    if (!element || typecraftRef.current) {
+      return; // Early return if element is not ready or instance already exists.
     }
 
-    return () => {
-      if (typecraftRef.current) {
-        typecraftRef.current.stop();
+    const instance = new TypecraftEngine(element, mergedOptions);
+    typecraftRef.current = instance;
 
-        if (onTypeStart) {
-          typecraftRef.current.off('typeStart', onTypeStart);
-        }
-        if (onTypeChar) {
-          typecraftRef.current.off('typeChar', onTypeChar);
-        }
-        if (onTypeComplete) {
-          typecraftRef.current.off('typeComplete', onTypeComplete);
-        }
-        if (onDeleteStart) {
-          typecraftRef.current.off('deleteStart', onDeleteStart);
-        }
-        if (onDeleteChar) {
-          typecraftRef.current.off('deleteChar', onDeleteChar);
-        }
-        if (onDeleteComplete) {
-          typecraftRef.current.off('deleteComplete', onDeleteComplete);
-        }
-        if (onDeleteSkipped) {
-          typecraftRef.current.off('deleteSkipped', onDeleteSkipped);
-        }
-        if (onPauseStart) {
-          typecraftRef.current.off('pauseStart', onPauseStart);
-        }
-        if (onPauseEnd) {
-          typecraftRef.current.off('pauseEnd', onPauseEnd);
-        }
-        if (onComplete) {
-          typecraftRef.current.off('complete', onComplete);
-        }
-      }
+    if (onInit) {
+      onInit(instance);
+    }
+
+    const cleanupEventListeners = attachEventListeners(instance);
+
+    // Auto start typing effect if enabled.
+    if (mergedOptions.autoStart) {
+      instance.start();
+    }
+
+    // Cleanup: stop instance and detach event listeners.
+    return () => {
+      instance.stop();
+      cleanupEventListeners();
     };
   }, [
     element,

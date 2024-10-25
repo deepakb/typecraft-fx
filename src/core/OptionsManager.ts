@@ -40,7 +40,7 @@ export class OptionsManager {
   private initializeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
     const defaultOptions: TypecraftOptions = {
       strings: [],
-      speed: 50,
+      speed: { type: 50, delete: 50, delay: 1500 },
       pauseFor: 1500,
       loop: false,
       autoStart: false,
@@ -64,10 +64,6 @@ export class OptionsManager {
     const mergedOptions = {
       ...defaultOptions,
       ...options,
-      cursor: {
-        ...defaultOptions.cursor,
-        ...options.cursor,
-      },
     };
 
     logger.debug('Options initialized', { mergedOptions });

@@ -1,4 +1,3 @@
-import { EasingManager } from './EasingManager';
 import { SpeedOptions, TypecraftOptions } from './types';
 import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
 import { logger } from './TypecraftLogger';
@@ -48,27 +47,19 @@ export class SpeedManager {
     }
   }
 
-  public getTypeSpeed(easingManager: EasingManager): number {
+  public getSpeed(): SpeedOptions {
     try {
-      const speed =
-        typeof this.options.speed === 'object' ? this.options.speed.type : this.options.speed;
-
-      if (typeof speed === 'number') {
-        const easedSpeed = easingManager.applyEasing(speed);
-        logger.debug('Type speed calculated', { originalSpeed: speed, easedSpeed });
-        return easedSpeed;
-      } else if (speed === 'natural') {
-        const naturalSpeed = Math.random() * (150 - 50) + 50;
-        logger.debug('Natural type speed calculated', { naturalSpeed });
-        return naturalSpeed;
+      if (typeof this.options.speed === 'object') {
+        logger.debug('Speed options retrieved', { speed: this.options.speed });
+        return this.options.speed;
       } else {
-        logger.warn('Invalid speed type, using default speed of 50');
-        return 50;
+        logger.warn('Invalid speed type, using default speed options');
+        return { type: 50, delete: 50, delay: 1500 };
       }
     } catch (error) {
       throw new TypecraftError(
         ErrorCode.RUNTIME_ERROR,
-        'Failed to get type speed',
+        'Failed to get speed options',
         ErrorSeverity.HIGH,
         { error }
       );

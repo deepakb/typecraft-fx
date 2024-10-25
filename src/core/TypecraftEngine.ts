@@ -47,6 +47,7 @@ export class TypecraftEngine {
       this.stringManager = new StringManager(this.queueManager);
       this.speedManager = new SpeedManager(this.options);
       this.easingManager = new EasingManager(this.options);
+      this.setSpeed(this.options.speed);
       this.init();
       logger.info('TypecraftEngine initialized', { element, options });
     } catch (error) {
@@ -92,18 +93,16 @@ export class TypecraftEngine {
   }
 
   private update(currentTime: number): void {
-    // Update cursor blink
     this.cursorManager.updateBlink(currentTime);
+  }
 
-    // Other update logic can be added here
+  public setSpeed(speed: number | Partial<SpeedOptions>): this {
+    this.speedManager.setSpeed(speed);
+    return this;
   }
 
   public getElement(): HTMLElement {
     return this.stateManager.getState().element;
-  }
-
-  private getTypeSpeed(): number {
-    return this.speedManager.getTypeSpeed(this.easingManager);
   }
 
   private setupCursor(): void {
@@ -154,6 +153,7 @@ export class TypecraftEngine {
   private async runQueue(): Promise<void> {
     while (true) {
       const queueItem = this.queueManager.getNext();
+      logger.debug('Running queue item', { queueItem });
       if (!queueItem) {
         this.emit('complete');
         if (this.options.loop) {
@@ -184,11 +184,13 @@ export class TypecraftEngine {
             await this.typeHtmlTagClose(payload);
             break;
           case QueueActionType.DELETE:
-          case QueueActionType.DELETE_CHARACTER:
+          case QueueActionType.DELETE_CHARACTERS:
+            logger.debug('Processing delete character action');
             const state = this.stateManager.getState();
             if (state.visibleNodes.length > 0) {
-              await this.deleteCharacter();
+              await this.deleteChars(1);
             } else {
+              logger.warn('Delete skipped: No visible nodes');
               this.emit('deleteSkipped');
             }
             break;
@@ -208,12 +210,7 @@ export class TypecraftEngine {
             logger.warn(`Unknown queue action type: ${type}`);
         }
       } catch (error) {
-        throw new TypecraftError(
-          ErrorCode.RUNTIME_ERROR,
-          'Error processing queue item',
-          ErrorSeverity.HIGH,
-          { originalError: error, queueItem }
-        );
+        console.error('Error processing queue item:', error);
       }
     }
   }
@@ -232,7 +229,8 @@ export class TypecraftEngine {
     state.element.insertBefore(element, this.cursorManager.getCursorElement());
     this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: element });
     this.cursorManager.updateCursorPosition(state.element);
-    await this.wait(this.getTypeSpeed());
+    const { type } = this.speedManager.getSpeed();
+    await this.wait(type);
   }
 
   private async typeHtmlTagClose(payload: { tagName: string }): Promise<void> {
@@ -251,7 +249,8 @@ export class TypecraftEngine {
         this.cursorManager.updateCursorPosition(state.element);
       }
     }
-    await this.wait(this.getTypeSpeed());
+    const { type } = this.speedManager.getSpeed();
+    await this.wait(type);
   }
 
   private checkOperationComplete(): void {
@@ -259,7 +258,7 @@ export class TypecraftEngine {
     if (state.queue.length === 0) {
       if (state.lastOperation === QueueActionType.TYPE_CHARACTER) {
         this.emit('typeComplete');
-      } else if (state.lastOperation === QueueActionType.DELETE_CHARACTER) {
+      } else if (state.lastOperation === QueueActionType.DELETE_CHARACTERS) {
         this.emit('deleteComplete');
       }
       this.emit('complete');
@@ -339,8 +338,7 @@ export class TypecraftEngine {
 
     this.cursorManager.updateCursorPosition(state.element);
 
-    const typeSpeed =
-      typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type;
+    const typeSpeed = this.options.speed.type;
     await new Promise((resolve) => setTimeout(resolve, typeSpeed));
 
     await this.applyTextEffect(this.options.textEffect);
@@ -361,56 +359,10 @@ export class TypecraftEngine {
           node: textNode.parentElement as HTMLElement,
         });
         this.cursorManager.updateCursorPosition(state.element);
-        await this.wait(this.getTypeSpeed());
+        const { type } = this.speedManager.getSpeed();
+        await this.wait(type);
         this.emit('typeChar', { char });
       }
-    }
-  }
-
-  private async deleteCharacter(): Promise<void> {
-    const state = this.stateManager.getState();
-    logger.debug('Current state:', state);
-
-    if (!state.visibleNodes || state.visibleNodes.length === 0) {
-      logger.warn('No visible nodes to delete');
-      return;
-    }
-
-    const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
-    logger.debug('Last node:', lastNode);
-
-    try {
-      if (lastNode.type === NodeType.Character) {
-        const span = lastNode.node as HTMLElement;
-        const text = span.textContent || '';
-        if (text.length > 1) {
-          span.textContent = text.slice(0, -1);
-          logger.debug('Character deleted from span');
-        } else {
-          this.stateManager.removeLastVisibleNode();
-          span.parentNode?.removeChild(span);
-          logger.debug('Span removed');
-        }
-      } else {
-        this.stateManager.removeLastVisibleNode();
-        lastNode.node.parentNode?.removeChild(lastNode.node);
-        logger.debug('Non-character node removed');
-      }
-
-      // Always update cursor position, even if no node was removed
-      this.cursorManager.updateCursorPosition(state.element);
-      logger.debug('Cursor position updated');
-
-      const deleteSpeed =
-        typeof this.options.speed === 'number'
-          ? this.options.speed
-          : this.options.speed.delete || 50;
-      await this.wait(deleteSpeed);
-      this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
-      logger.debug('Delete character operation completed');
-    } catch (error) {
-      // logger.error('Error in deleteCharacter:', error);
-      throw error; // Re-throw the error to make the test fail if there's an unexpected error
     }
   }
 
@@ -424,15 +376,10 @@ export class TypecraftEngine {
       .filter((node) => node.type === NodeType.Character)
       .map((node) => node.node as HTMLElement);
 
+    const { type } = this.speedManager.getSpeed();
     await Promise.all(
       nodes.map((node, i) =>
-        this.EffectManager.applyTextEffect(
-          effect,
-          node,
-          i,
-          () => this.getTypeSpeed(),
-          this.easingManager
-        )
+        this.EffectManager.applyTextEffect(effect, node, i, type, this.easingManager)
       )
     );
 
@@ -459,11 +406,6 @@ export class TypecraftEngine {
     this.options.direction = direction;
     const state = this.stateManager.getState();
     state.element.style.direction = direction;
-    return this;
-  }
-
-  public setSpeed(speedOptions: Partial<SpeedOptions>): this {
-    this.speedManager.setSpeed(speedOptions);
     return this;
   }
 
@@ -586,14 +528,54 @@ export class TypecraftEngine {
     return this;
   }
 
-  public deleteChars(numChars: number): this {
+  public async deleteChars(numChars: number = 1): Promise<void> {
+    logger.info('Deleting characters:', { numChars });
+    const state = this.stateManager.getState();
+
     for (let i = 0; i < numChars; i++) {
-      this.queueManager.add({
-        type: QueueActionType.DELETE_CHARACTER,
-        payload: {},
-      });
+      if (!state.visibleNodes || state.visibleNodes.length === 0) {
+        logger.warn('No more visible nodes to delete');
+        break;
+      }
+
+      const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+
+      try {
+        if (lastNode.type === NodeType.Character) {
+          const span = lastNode.node as HTMLElement;
+          const text = span.textContent || '';
+          if (text.length > 1) {
+            span.textContent = text.slice(0, -1);
+            logger.debug('Character deleted from span, new content:', { el: span.textContent });
+          } else {
+            this.stateManager.removeLastVisibleNode();
+            span.parentNode?.removeChild(span);
+            logger.debug('Span removed');
+          }
+        } else {
+          this.stateManager.removeLastVisibleNode();
+          lastNode.node.parentNode?.removeChild(lastNode.node);
+          logger.debug('Non-character node removed');
+        }
+
+        this.cursorManager.updateCursorPosition(state.element);
+        logger.debug('Cursor position updated');
+
+        const { delete: deleteSpeed } = this.speedManager.getSpeed();
+        await this.wait(deleteSpeed);
+        this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
+      } catch (error) {
+        throw new TypecraftError(
+          ErrorCode.RUNTIME_ERROR,
+          `Error in deleteChars: ${error}`,
+          ErrorSeverity.HIGH,
+          { originalError: error }
+        );
+      }
     }
-    return this;
+
+    // Update the element's text content after deletion
+    state.element.textContent = state.visibleNodes.map((node) => node.node.textContent).join('');
   }
 
   public typeAndReplace(words: string[], delay: number = 1000): this {

@@ -158,7 +158,14 @@ describe('TypecraftFX', () => {
 
     render(<TypecraftFX {...options} />);
 
-    expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), options);
-    expect(mockTypecraft.start).not.toHaveBeenCalled();
+    expect(TypecraftEngine).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      expect.objectContaining(options)
+    );
+    if (options.autoStart) {
+      expect(mockTypecraft.start).toHaveBeenCalled();
+    } else {
+      expect(mockTypecraft.start).not.toHaveBeenCalled();
+    }
   });
 });

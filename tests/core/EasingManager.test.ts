@@ -9,7 +9,7 @@ describe('EasingManager', () => {
   beforeEach(() => {
     defaultOptions = {
       strings: [],
-      speed: 50,
+      speed: { type: 50, delete: 50, delay: 1500 },
       pauseFor: 1500,
       loop: false,
       autoStart: false,

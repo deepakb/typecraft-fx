@@ -92,11 +92,11 @@ describe('EffectManager', () => {
   describe('applyTypecraftEffect', () => {
     it('should apply typecraft effect', async () => {
       const resolveMock = vi.fn();
-      const getTypeSpeed = vi.fn().mockReturnValue(100);
+      const speed = vi.fn().mockReturnValue(100);
       const animationPromise = (effectManager as any).applyTypecraftEffect(
         mockNode,
         0,
-        getTypeSpeed,
+        speed,
         resolveMock,
         mockEasingManager
       );

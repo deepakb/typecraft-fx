@@ -19,6 +19,7 @@ export class QueueManager {
   }
 
   public getNext(): QueueItem | undefined {
+    logger.debug('Getting next item from queue', { queueSize: this.queue.length });
     if (this.queue.length === 0) {
       logger.debug('Attempted to get next item from empty queue');
       return undefined;

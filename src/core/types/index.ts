@@ -21,7 +21,7 @@ export interface SpeedOptions {
 export type CustomEffectFunction = (
   node: HTMLElement,
   index: number,
-  getTypeSpeed: () => number,
+  speed: number,
   easingManager: EasingManager
 ) => void;
 
@@ -70,7 +70,7 @@ export interface TypecraftState {
   lastFrameTime: number | null;
   pauseUntil: number | null;
   cursorNode: HTMLElement | null;
-  currentSpeed: number | 'natural';
+  currentSpeed: number;
   eventQueue: (() => void)[];
   eventListeners: Map<string, EventCallback[]>;
   cursorBlinkState: boolean;
@@ -94,7 +94,7 @@ export enum QueueActionType {
   CHANGE_CURSOR = 'changeCursor',
   CHANGE_CURSOR_STYLE = 'changeCursorStyle',
   CHANGE_TEXT_EFFECT = 'setTextEffect',
-  DELETE_CHARACTER = 'deleteCharacter',
+  DELETE_CHARACTERS = 'deleteChars',
   CALL_FUNCTION = 'callFunction',
   TYPE_CHARACTER = 'typeCharacter',
   TYPE_HTML_TAG_OPEN = 'typeHtmlTagOpen',
