@@ -28,7 +28,7 @@ const LazyTypecraftFX = lazy(() =>
 // The lazy-loaded TypecraftFX component wrapped with Suspense and memo for optimization
 export const TypecraftFXLazy: FC<TypecraftFXLazyProps> = memo(
   ({
-    loadingComponent = <div>Loading...</div>, // Default loading fallback component
+    loadingComponent = <div aria-label="Loading TypecraftFX">Loading...</div>, // Default loading fallback component
     ...props // Spread other props to be passed to the TypecraftFX component
   }) => (
     <Suspense fallback={loadingComponent}>

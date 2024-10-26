@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { StateManager } from '../../src/core/StateManager';
+import { StateManager } from '../../src/core/managers/StateManager';
 import {
   TypecraftOptions,
   NodeType,
@@ -8,7 +8,7 @@ import {
   CursorStyle,
   Direction,
   TextEffect,
-} from '../../src/core/types';
+} from '../../src/types';
 
 describe('StateManager', () => {
   let stateManager: StateManager;

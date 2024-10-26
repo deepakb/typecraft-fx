@@ -6,7 +6,7 @@ import {
   QueueActionType,
   EasingFunction,
   CursorStyle,
-} from '../../src/core/types';
+} from '../../src/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock the managers

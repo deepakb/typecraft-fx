@@ -1,23 +1,34 @@
 /* eslint-disable no-console */
 import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
-enum LogLevel {
+export enum LogLevel {
   ERROR = 'ERROR',
   WARN = 'WARN',
   INFO = 'INFO',
   DEBUG = 'DEBUG',
 }
 
-interface LogEntry {
+export interface ILogEntry {
   level: LogLevel;
   message: string;
   timestamp: Date;
   details?: Record<string, any>;
 }
 
-class TypecraftLogger {
+export interface ITypecraftLogger {
+  setLogLevel(level: LogLevel): void;
+  error(code: ErrorCode, message: string, details?: Record<string, any>): void;
+  warn(message: string, details?: Record<string, any>): void;
+  info(message: string, details?: Record<string, any>): void;
+  debug(message: string, details?: Record<string, any>): void;
+  getLogEntries(): ILogEntry[];
+  clearLogs(): void;
+}
+
+export class TypecraftLogger implements ITypecraftLogger {
   private static instance: TypecraftLogger;
-  private logEntries: LogEntry[] = [];
+  private logEntries: ILogEntry[] = [];
   private logLevel: LogLevel = LogLevel.INFO;
 
   private constructor() {}
@@ -30,6 +41,9 @@ class TypecraftLogger {
   }
 
   public setLogLevel(level: LogLevel): void {
+    if (!Object.values(LogLevel).includes(level)) {
+      this.handleError(new Error('Invalid log level'), 'Invalid log level provided', { level });
+    }
     this.logLevel = level;
   }
 
@@ -51,9 +65,17 @@ class TypecraftLogger {
     this.log(LogLevel.DEBUG, `🔍 TypecraftFX Debug: ${message}`, details);
   }
 
+  public getLogEntries(): ILogEntry[] {
+    return [...this.logEntries];
+  }
+
+  public clearLogs(): void {
+    this.logEntries = [];
+  }
+
   private log(level: LogLevel, message: string, details?: Record<string, any>): void {
     if (this.shouldLog(level)) {
-      const entry: LogEntry = {
+      const entry: ILogEntry = {
         level,
         message,
         timestamp: new Date(),
@@ -69,7 +91,7 @@ class TypecraftLogger {
     return levels.indexOf(level) <= levels.indexOf(this.logLevel);
   }
 
-  private writeToConsole(entry: LogEntry): void {
+  private writeToConsole(entry: ILogEntry): void {
     const { level, message, timestamp, details } = entry;
     const formattedMessage = `[${timestamp.toISOString()}] ${message}`;
 
@@ -89,12 +111,13 @@ class TypecraftLogger {
     }
   }
 
-  public getLogEntries(): LogEntry[] {
-    return [...this.logEntries];
-  }
-
-  public clearLogs(): void {
-    this.logEntries = [];
+  private handleError(
+    error: unknown,
+    message: string,
+    context: object = {},
+    severity: ErrorSeverity = ErrorSeverity.HIGH
+  ): never {
+    ErrorHandler.handleError(error, message, context, severity);
   }
 }
 

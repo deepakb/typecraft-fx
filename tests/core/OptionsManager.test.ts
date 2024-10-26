@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { OptionsManager } from '../../src/core/OptionsManager';
-import { TypecraftOptions, CursorStyle, Direction, TextEffect } from '../../src/core/types';
+import { OptionsManager } from '../../src/core/managers/OptionsManager';
+import { TypecraftOptions, CursorStyle, Direction, TextEffect } from '../../src/types';
 
 describe('OptionsManager', () => {
   let optionsManager: OptionsManager;

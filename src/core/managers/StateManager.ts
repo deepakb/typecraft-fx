@@ -4,38 +4,54 @@ import {
   NodeType,
   QueueActionType,
   EventCallback,
-} from './types';
-import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
-import { logger } from './TypecraftLogger';
+} from '../../types';
+import { ErrorHandler } from '../../utils/ErrorHandler';
+import { ErrorSeverity } from '../TypecraftError';
+import { ITypecraftLogger } from '../TypecraftLogger';
 
-export class StateManager {
+export interface IStateManager {
+  getState(): TypecraftState;
+  updateVisibleNodes(node: { type: NodeType; node: HTMLElement }): void;
+  removeLastVisibleNode(): void;
+  clearVisibleNodes(): void;
+  updateLastOperation(operation: QueueActionType): void;
+  addEventListener(eventName: string, callback: EventCallback): void;
+  removeEventListener(eventName: string, callback: EventCallback): void;
+  getEventListeners(eventName: string): EventCallback[] | undefined;
+  updateCursorBlinkState(state: boolean): void;
+  updateLastCursorBlinkTime(time: number): void;
+  setCursorNode(node: HTMLElement | null): void;
+}
+
+export class StateManager implements IStateManager {
   private state: TypecraftState;
 
-  constructor(element: HTMLElement, options: TypecraftOptions) {
+  constructor(
+    element: HTMLElement,
+    options: TypecraftOptions,
+    private logger: ITypecraftLogger,
+    private errorHandler: ErrorHandler
+  ) {
     try {
       this.state = this.initializeState(element, options);
-      logger.debug('StateManager initialized', { element, options });
+      this.logger.debug('StateManager initialized', { element, options });
     } catch (error) {
-      if (error instanceof TypecraftError) {
-        throw error;
-      } else {
-        throw new TypecraftError(
-          ErrorCode.INITIALIZATION_ERROR,
-          'Failed to initialize StateManager',
-          ErrorSeverity.HIGH,
-          { originalError: error }
-        );
-      }
+      this.errorHandler.handleError(
+        error,
+        'Failed to initialize StateManager',
+        { element, options },
+        ErrorSeverity.HIGH
+      );
     }
   }
 
   private initializeState(element: HTMLElement, options: TypecraftOptions): TypecraftState {
     if (!element || !(element instanceof HTMLElement)) {
-      throw new TypecraftError(
-        ErrorCode.INVALID_ELEMENT,
+      this.errorHandler.handleError(
+        new Error('Invalid element'),
         'Invalid element provided',
-        ErrorSeverity.HIGH,
-        { element }
+        { element },
+        ErrorSeverity.HIGH
       );
     }
     return {
@@ -62,15 +78,15 @@ export class StateManager {
 
   public updateVisibleNodes(node: { type: NodeType; node: HTMLElement }): void {
     if (!node || !node.type || !(node.node instanceof HTMLElement)) {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid node'),
         'Invalid node provided',
-        ErrorSeverity.HIGH,
-        { node }
+        { node },
+        ErrorSeverity.HIGH
       );
     }
     this.state.visibleNodes.push(node);
-    logger.debug('Visible nodes updated', {
+    this.logger.debug('Visible nodes updated', {
       addedNode: node,
       totalNodes: this.state.visibleNodes.length,
     });
@@ -78,57 +94,60 @@ export class StateManager {
 
   public removeLastVisibleNode(): void {
     if (this.state.visibleNodes.length === 0) {
-      throw new TypecraftError(
-        ErrorCode.RUNTIME_ERROR,
+      this.errorHandler.handleError(
+        new Error('No visible nodes'),
         'No visible nodes to remove',
+        {},
         ErrorSeverity.MEDIUM
       );
     }
     this.state.visibleNodes.pop();
-    logger.debug('Last visible node removed', { remainingNodes: this.state.visibleNodes.length });
+    this.logger.debug('Last visible node removed', {
+      remainingNodes: this.state.visibleNodes.length,
+    });
   }
 
   public clearVisibleNodes(): void {
     this.state.visibleNodes = [];
-    logger.debug('Visible nodes cleared');
+    this.logger.debug('Visible nodes cleared');
   }
 
   public updateLastOperation(operation: QueueActionType): void {
     if (!operation) {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid operation'),
         'Invalid operation provided',
-        ErrorSeverity.HIGH,
-        { operation }
+        { operation },
+        ErrorSeverity.HIGH
       );
     }
     this.state.lastOperation = operation;
-    logger.debug('Last operation updated', { operation });
+    this.logger.debug('Last operation updated', { operation });
   }
 
   public addEventListener(eventName: string, callback: EventCallback): void {
     if (typeof eventName !== 'string' || typeof callback !== 'function') {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid eventName or callback'),
         'Invalid eventName or callback provided',
-        ErrorSeverity.HIGH,
-        { eventName, callback }
+        { eventName, callback },
+        ErrorSeverity.HIGH
       );
     }
     if (!this.state.eventListeners.has(eventName)) {
       this.state.eventListeners.set(eventName, []);
     }
     this.state.eventListeners.get(eventName)!.push(callback);
-    logger.debug('Event listener added', { eventName });
+    this.logger.debug('Event listener added', { eventName });
   }
 
   public removeEventListener(eventName: string, callback: EventCallback): void {
     if (typeof eventName !== 'string' || typeof callback !== 'function') {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid eventName or callback'),
         'Invalid eventName or callback provided',
-        ErrorSeverity.HIGH,
-        { eventName, callback }
+        { eventName, callback },
+        ErrorSeverity.HIGH
       );
     }
     const listeners = this.state.eventListeners.get(eventName);
@@ -136,18 +155,18 @@ export class StateManager {
       const index = listeners.indexOf(callback);
       if (index !== -1) {
         listeners.splice(index, 1);
-        logger.debug('Event listener removed', { eventName });
+        this.logger.debug('Event listener removed', { eventName });
       }
     }
   }
 
   public getEventListeners(eventName: string): EventCallback[] | undefined {
     if (typeof eventName !== 'string') {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid eventName'),
         'Invalid eventName provided',
-        ErrorSeverity.HIGH,
-        { eventName }
+        { eventName },
+        ErrorSeverity.HIGH
       );
     }
     return this.state.eventListeners.get(eventName);
@@ -155,40 +174,40 @@ export class StateManager {
 
   public updateCursorBlinkState(state: boolean): void {
     if (typeof state !== 'boolean') {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid state'),
         'Invalid state provided',
-        ErrorSeverity.HIGH,
-        { state }
+        { state },
+        ErrorSeverity.HIGH
       );
     }
     this.state.cursorBlinkState = state;
-    logger.debug('Cursor blink state updated', { state });
+    this.logger.debug('Cursor blink state updated', { state });
   }
 
   public updateLastCursorBlinkTime(time: number): void {
     if (typeof time !== 'number' || isNaN(time)) {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid time'),
         'Invalid time provided',
-        ErrorSeverity.HIGH,
-        { time }
+        { time },
+        ErrorSeverity.HIGH
       );
     }
     this.state.lastCursorBlinkTime = time;
-    logger.debug('Last cursor blink time updated', { time });
+    this.logger.debug('Last cursor blink time updated', { time });
   }
 
   public setCursorNode(node: HTMLElement | null): void {
     if (node !== null && !(node instanceof HTMLElement)) {
-      throw new TypecraftError(
-        ErrorCode.INVALID_INPUT,
+      this.errorHandler.handleError(
+        new Error('Invalid node'),
         'Invalid node provided',
-        ErrorSeverity.HIGH,
-        { node }
+        { node },
+        ErrorSeverity.HIGH
       );
     }
     this.state.cursorNode = node;
-    logger.debug('Cursor node set', { node });
+    this.logger.debug('Cursor node set', { node });
   }
 }

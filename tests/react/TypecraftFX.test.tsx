@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { TypecraftFX } from '../../src/react/TypecraftFX';
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
-import { TypecraftOptions, Direction, CursorStyle, TextEffect } from '../../src/core/types';
+import { TypecraftOptions, Direction, CursorStyle, TextEffect } from '../../src/types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock the TypecraftEngine

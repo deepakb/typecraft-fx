@@ -5,6 +5,7 @@ export enum ErrorCode {
   RUNTIME_ERROR = 'RUNTIME_ERROR',
   INVALID_INPUT = 'INVALID_INPUT',
   INVALID_OPTION = 'INVALID_OPTION',
+  QUEUE_EXECUTION_ERROR = 'QUEUE_EXECUTION_ERROR',
 }
 
 export enum ErrorSeverity {
@@ -14,7 +15,16 @@ export enum ErrorSeverity {
   CRITICAL = 'CRITICAL',
 }
 
-export class TypecraftError extends Error {
+export interface ITypecraftError {
+  readonly code: ErrorCode;
+  readonly severity: ErrorSeverity;
+  readonly details?: Record<string, any>;
+  readonly timestamp: Date;
+  toJSON(): Record<string, any>;
+  toString(): string;
+}
+
+export class TypecraftError extends Error implements ITypecraftError {
   public readonly timestamp: Date;
 
   constructor(
@@ -26,6 +36,13 @@ export class TypecraftError extends Error {
     super(message);
     this.name = 'TypecraftError';
     this.timestamp = new Date();
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, TypecraftError);
+    }
+
+    // Set the prototype explicitly.
     Object.setPrototypeOf(this, TypecraftError.prototype);
   }
 
@@ -38,7 +55,7 @@ export class TypecraftError extends Error {
     return new TypecraftError(code, message, severity, details);
   }
 
-  toJSON(): Record<string, any> {
+  public toJSON(): Record<string, any> {
     return {
       name: this.name,
       code: this.code,
@@ -49,7 +66,7 @@ export class TypecraftError extends Error {
     };
   }
 
-  toString(): string {
+  public toString(): string {
     return `[${this.severity}] ${this.name} (${this.code}): ${this.message}`;
   }
 }

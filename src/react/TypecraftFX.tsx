@@ -7,9 +7,11 @@ import React, {
   useCallback,
 } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
-import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../core/types';
+import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../types';
 import { ErrorCode, TypecraftError } from '../core/TypecraftError';
-import { logger } from '../core/TypecraftLogger';
+import { ITypecraftLogger, logger } from '../core/TypecraftLogger';
+import { ManagerFactory } from '../core/factories/ManagerFactory';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
 export interface TypecraftFXProps extends TypecraftOptions {
   className?: string;
@@ -24,6 +26,9 @@ export interface TypecraftFXProps extends TypecraftOptions {
   onPauseStart?: () => void;
   onPauseEnd?: () => void;
   onComplete?: () => void;
+  ariaLabel?: string;
+  ariaLive?: 'off' | 'polite' | 'assertive';
+  ariaRelevant?: 'additions' | 'removals' | 'text' | 'all';
 }
 
 export interface TypecraftFXRef {
@@ -42,10 +47,13 @@ const defaultStyles = {
 const initializeEngine = (
   element: HTMLElement,
   options: TypecraftOptions,
+  logger: ITypecraftLogger,
   onInit?: (engine: TypecraftEngine) => void
 ) => {
   try {
-    const engine = new TypecraftEngine(element, options);
+    const managerFactory = new ManagerFactory(logger);
+    const errorHandler = new ErrorHandler(logger);
+    const engine = new TypecraftEngine(element, options, logger, errorHandler, managerFactory);
     onInit?.(engine);
     return engine;
   } catch (error) {
@@ -88,6 +96,9 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
     onPauseStart,
     onPauseEnd,
     onComplete,
+    ariaLabel = 'TypecraftFX Type Animation',
+    ariaLive = 'polite',
+    ariaRelevant = 'additions text',
     ...propsOptions
   } = props;
 
@@ -117,7 +128,7 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
   // Initialize engine on mount
   useEffect(() => {
     if (elementRef.current) {
-      engineRef.current = initializeEngine(elementRef.current, options, onInit);
+      engineRef.current = initializeEngine(elementRef.current, options, logger, onInit);
       if (autoStart) {
         engineRef.current?.start();
       }
@@ -125,7 +136,7 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
     return () => {
       engineRef.current?.stop();
     };
-  }, [options, onInit, autoStart]);
+  }, [options, onInit, autoStart, logger]);
 
   // Register event handlers using a callback
   const registerEventHandlers = useCallback(
@@ -181,7 +192,17 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
     }
   }, [registerEventHandlers]);
 
-  return <div ref={elementRef} className={className} style={mergedStyles} />;
+  return (
+    <div
+      ref={elementRef}
+      className={className}
+      style={mergedStyles}
+      role="region"
+      aria-label={ariaLabel}
+      aria-live={ariaLive}
+      aria-relevant={ariaRelevant}
+    />
+  );
 });
 
 TypecraftFX.displayName = 'TypecraftFX';

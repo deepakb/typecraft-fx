@@ -1,4 +1,4 @@
-import { EasingManager } from '../EasingManager';
+import { EasingManager } from '../core/managers/EasingManager';
 
 export interface CursorOptions {
   text: string;
@@ -78,11 +78,6 @@ export interface TypecraftState {
   cursorPosition: number;
   lastOperation: QueueActionType | null;
 }
-
-export type EventQueue = Array<{
-  eventName: string;
-  eventArgs: any[];
-}>;
 
 export enum QueueActionType {
   TYPE = 'type',
@@ -170,3 +165,16 @@ export type TypecraftEvent =
   | 'wordReplaceEnd';
 
 export type EventCallback = (...args: any[]) => void;
+
+export interface TypecraftContext {
+  typeCharacter: (payload: any) => Promise<void>;
+  typeHtmlTagOpen: (payload: any) => Promise<void>;
+  typeHtmlContent: (content: string) => Promise<void>;
+  typeHtmlTagClose: (payload: any) => Promise<void>;
+  deleteChars: (count: number) => Promise<void>;
+  wait: (ms: number) => Promise<void>;
+  typeAllStrings: () => void;
+  emit: (eventName: TypecraftEvent, payload?: any) => void;
+  getState: () => TypecraftState;
+  options: TypecraftOptions;
+}

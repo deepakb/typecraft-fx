@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { EasingManager } from '../../src/core/EasingManager';
-import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../../src/core/types';
+import { EasingManager } from '../../src/core/managers/EasingManager';
+import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../../src/types';
 
 describe('EasingManager', () => {
   let easingManager: EasingManager;

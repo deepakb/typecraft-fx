@@ -1,5 +1,5 @@
-import { CursorManager } from '../../src/core/CursorManager';
-import { CursorOptions, CursorStyle } from '../../src/core/types';
+import { CursorManager } from '../../src/core/managers/CursorManager';
+import { CursorOptions, CursorStyle } from '../../src/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 describe('CursorManager', () => {

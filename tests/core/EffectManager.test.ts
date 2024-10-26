@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EffectManager } from '../../src/core/EffectsManager';
-import { EasingManager } from '../../src/core/EasingManager';
-import { TextEffect } from '../../src/core/types';
+import { EffectManager } from '../../src/core/managers/EffectManager';
+import { EasingManager } from '../../src/core/managers/EasingManager';
+import { TextEffect } from '../../src/types';
 
 describe('EffectManager', () => {
   let effectManager: EffectManager;

@@ -1,5 +1,5 @@
-import { QueueManager } from '../../src/core/QueueManager';
-import { QueueItem, QueueActionType } from '../../src/core/types';
+import { QueueManager } from '../../src/core/managers/QueueManager';
+import { QueueItem, QueueActionType } from '../../src/types';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('QueueManager', () => {

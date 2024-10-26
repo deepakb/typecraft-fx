@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StringManager } from '../../src/core/StringManager';
-import { QueueManager } from '../../src/core/QueueManager';
-import { QueueActionType } from '../../src/core/types';
+import { StringManager } from '../../src/core/managers/StringManager';
+import { QueueManager } from '../../src/core/managers/QueueManager';
+import { QueueActionType } from '../../src/types';
 
 describe('StringManager', () => {
   let stringManager: StringManager;

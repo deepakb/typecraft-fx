@@ -1,13 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
-import {
-  TypecraftOptions,
-  EventCallback,
-  CursorStyle,
-  Direction,
-  TextEffect,
-  TypecraftEvent,
-} from '../core/types';
+import { TypecraftOptions, EventCallback, TypecraftEvent } from '../types';
+import { DEFAULT_OPTIONS } from '../constants';
+import { ManagerFactory } from '../core/factories/ManagerFactory';
+import { ErrorHandler } from '../utils/ErrorHandler';
+import { logger } from '../core/TypecraftLogger';
 
 export interface UseTypecraftFXProps {
   options?: Partial<TypecraftOptions>;
@@ -23,26 +20,6 @@ export interface UseTypecraftFXProps {
   onPauseEnd?: EventCallback;
   onComplete?: EventCallback;
 }
-
-const defaultOptions: TypecraftOptions = {
-  strings: ['Welcome to TypecraftFX'],
-  speed: { type: 50, delete: 40, delay: 1500 },
-  loop: false,
-  autoStart: true,
-  cursor: {
-    text: '|',
-    color: 'black',
-    blinkSpeed: 500,
-    opacity: { min: 0, max: 1 },
-    style: CursorStyle.Solid,
-    blink: true,
-  },
-  pauseFor: 1500,
-  direction: Direction.LTR,
-  textEffect: TextEffect.None,
-  easingFunction: (t) => t,
-  html: false,
-};
 
 export function useTypecraftFX({
   options = {},
@@ -64,50 +41,72 @@ export function useTypecraftFX({
   // Memoize options to prevent unnecessary re-renders and recalculations.
   const mergedOptions = useMemo(
     () => ({
-      ...defaultOptions,
+      ...DEFAULT_OPTIONS,
       ...options,
-      cursor: { ...defaultOptions.cursor, ...options.cursor },
-      speed: { ...defaultOptions.speed, ...options.speed },
+      cursor: { ...DEFAULT_OPTIONS.cursor, ...options.cursor },
+      speed: { ...DEFAULT_OPTIONS.speed, ...options.speed },
     }),
     [options]
   );
 
   // Helper to attach event listeners
-  const attachEventListeners = (instance: TypecraftEngine) => {
-    const eventHandlers: Partial<Record<TypecraftEvent, EventCallback>> = {
-      typeStart: onTypeStart,
-      typeChar: onTypeChar,
-      typeComplete: onTypeComplete,
-      deleteStart: onDeleteStart,
-      deleteChar: onDeleteChar,
-      deleteComplete: onDeleteComplete,
-      deleteSkipped: onDeleteSkipped,
-      pauseStart: onPauseStart,
-      pauseEnd: onPauseEnd,
-      complete: onComplete,
-    };
+  const attachEventListeners = useCallback(
+    (instance: TypecraftEngine) => {
+      const eventHandlers: Partial<Record<TypecraftEvent, EventCallback>> = {
+        typeStart: onTypeStart,
+        typeChar: onTypeChar,
+        typeComplete: onTypeComplete,
+        deleteStart: onDeleteStart,
+        deleteChar: onDeleteChar,
+        deleteComplete: onDeleteComplete,
+        deleteSkipped: onDeleteSkipped,
+        pauseStart: onPauseStart,
+        pauseEnd: onPauseEnd,
+        complete: onComplete,
+      };
 
-    Object.entries(eventHandlers).forEach(([event, handler]) => {
-      if (handler) {
-        instance.on(event as TypecraftEvent, handler);
-      }
-    });
-
-    return () => {
       Object.entries(eventHandlers).forEach(([event, handler]) => {
         if (handler) {
-          instance.off(event as TypecraftEvent, handler);
+          instance.on(event as TypecraftEvent, handler);
         }
       });
-    };
-  };
+
+      return () => {
+        Object.entries(eventHandlers).forEach(([event, handler]) => {
+          if (handler) {
+            instance.off(event as TypecraftEvent, handler);
+          }
+        });
+      };
+    },
+    [
+      onTypeStart,
+      onTypeChar,
+      onTypeComplete,
+      onDeleteStart,
+      onDeleteChar,
+      onDeleteComplete,
+      onDeleteSkipped,
+      onPauseStart,
+      onPauseEnd,
+      onComplete,
+    ]
+  );
 
   useEffect(() => {
     if (!element || typecraftRef.current) {
-      return; // Early return if element is not ready or instance already exists.
+      return;
     }
 
-    const instance = new TypecraftEngine(element, mergedOptions);
+    const managerFactory = new ManagerFactory(logger);
+    const errorHandler = new ErrorHandler(logger);
+    const instance = new TypecraftEngine(
+      element,
+      mergedOptions,
+      logger,
+      errorHandler,
+      managerFactory
+    );
     typecraftRef.current = instance;
 
     if (onInit) {
@@ -126,21 +125,7 @@ export function useTypecraftFX({
       instance.stop();
       cleanupEventListeners();
     };
-  }, [
-    element,
-    mergedOptions,
-    onInit,
-    onTypeStart,
-    onTypeChar,
-    onTypeComplete,
-    onDeleteStart,
-    onDeleteChar,
-    onDeleteComplete,
-    onDeleteSkipped,
-    onPauseStart,
-    onPauseEnd,
-    onComplete,
-  ]);
+  }, [element, mergedOptions, onInit, attachEventListeners]);
 
   return {
     setElement,

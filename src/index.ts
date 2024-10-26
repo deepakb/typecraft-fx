@@ -2,8 +2,8 @@ import { ForwardRefExoticComponent, RefAttributes } from 'react';
 import { TypecraftFXProps, TypecraftFXRef } from './react/TypecraftFX';
 
 export { TypecraftEngine } from './core/TypecraftEngine';
-export { Direction, CursorStyle, TextEffect } from './core/types';
-export type { TypecraftOptions } from './core/types';
+export { Direction, CursorStyle, TextEffect } from './types';
+export type { TypecraftOptions } from './types';
 export { useTypecraftFX } from './react/useTypecraftFX';
 
 export const TypecraftFX: () => Promise<{
