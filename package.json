@@ -1,17 +1,51 @@
 {
   "name": "typecraft-fx",
+  "description": "TypecraftFX is a feature-rich library that brings dynamic typing animations to your web projects.",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/typecraft-fx.umd.js",
   "module": "./dist/typecraft-fx.es.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "keywords": [
+    "react",
+    "typescript",
+    "animation",
+    "typing",
+    "text-effect",
+    "cursor",
+    "effects",
+    "typing-effect",
+    "react-typing-effect",
+    "typecraft",
+    "typecraft-fx",
+    "typecraft-react",
+    "typecraft-text-effect",
+    "typecraft-cursor",
+    "typecraft-effects",
+    "typecraft-typing",
+    "typecraft-animation",
+    "typecraft-react-effects",
+    "typecraft-react-cursor",
+    "typecraft-react-text-effect",
+    "typecraft-react-typing",
+    "typecraft-react-animation"
+  ],
+  "author": "Deepak Biswal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepakb/typecraft-fx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/deepakb/typecraft-fx/issues"
+  },
   "exports": {
     ".": {
       "import": "./dist/typecraft-fx.es.js",
       "require": "./dist/typecraft-fx.umd.js"
     }
   },
-  "sideEffects": false,
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -25,14 +59,13 @@
     "build-storybook": "storybook build",
     "prepare": "husky install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
+    "@storybook/addon-docs": "^8.3.5",
     "@storybook/addon-essentials": "^8.3.5",
     "@storybook/addon-interactions": "^8.3.5",
     "@storybook/addon-links": "^8.3.5",
     "@storybook/addon-onboarding": "^8.3.5",
+    "@storybook/blocks": "^8.3.5",
     "@storybook/builder-vite": "^8.3.5",
     "@storybook/react": "^8.3.5",
     "@storybook/react-vite": "^8.3.5",
@@ -61,6 +94,7 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
   }
 }

@@ -1,5 +1,14 @@
+import { ForwardRefExoticComponent, RefAttributes } from 'react';
+import { TypecraftFXProps, TypecraftFXRef } from './react/TypecraftFX';
+
 export { TypecraftEngine } from './core/TypecraftEngine';
-export { TypecraftComponentWithSuspense as TypecraftComponent } from './react/TypecraftComponentLazy';
-export { Direction, CursorStyle, TextEffect } from './core/types';
-export type { TypecraftOptions } from './core/types';
-export { useTypecraft } from './react/useTypecraft';
+export { Direction, CursorStyle, TextEffect } from './types';
+export type { TypecraftOptions } from './types';
+export { useTypecraftFX } from './react/useTypecraftFX';
+
+export const TypecraftFX: () => Promise<{
+  default: ForwardRefExoticComponent<TypecraftFXProps & RefAttributes<TypecraftFXRef>>;
+}> = () => import('./react/TypecraftFX').then((m) => ({ default: m.TypecraftFX }));
+
+export const TypecraftFXLazy = () =>
+  import('./react/TypecraftFXLazy').then((m) => m.TypecraftFXLazy);

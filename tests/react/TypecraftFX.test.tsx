@@ -1,13 +1,13 @@
 import { render } from '@testing-library/react';
-import { TypecraftComponent } from '../../src/react/TypecraftComponent';
+import { TypecraftFX } from '../../src/react/TypecraftFX';
 import { TypecraftEngine } from '../../src/core/TypecraftEngine';
-import { TypecraftOptions, Direction, CursorStyle, TextEffect } from '../../src/core/types';
+import { TypecraftOptions, Direction, CursorStyle, TextEffect } from '../../src/types';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock the TypecraftEngine
 vi.mock('../../src/core/TypecraftEngine');
 
-describe('TypecraftComponent', () => {
+describe('TypecraftFX', () => {
   let mockTypecraft: {
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
@@ -46,7 +46,7 @@ describe('TypecraftComponent', () => {
       html: false,
       textEffect: TextEffect.None,
     };
-    const { container } = render(<TypecraftComponent {...options} />);
+    const { container } = render(<TypecraftFX {...options} />);
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -65,13 +65,13 @@ describe('TypecraftComponent', () => {
       },
       pauseFor: 2000,
       loop: true,
-      autoStart: false,
+      autoStart: true,
       easingFunction: (t) => t,
       html: false,
       textEffect: TextEffect.None,
     };
 
-    render(<TypecraftComponent {...options} />);
+    render(<TypecraftFX {...options} />);
 
     expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), options);
     expect(mockTypecraft.start).toHaveBeenCalled();
@@ -99,7 +99,7 @@ describe('TypecraftComponent', () => {
     };
 
     const { container } = render(
-      <TypecraftComponent {...options} className="custom-class" style={{ color: 'red' }} />
+      <TypecraftFX {...options} className="custom-class" style={{ color: 'red' }} />
     );
 
     const element = container.firstChild as HTMLElement;
@@ -128,10 +128,44 @@ describe('TypecraftComponent', () => {
       textEffect: TextEffect.None,
     };
 
-    const { unmount } = render(<TypecraftComponent {...options} />);
+    const { unmount } = render(<TypecraftFX {...options} />);
 
     unmount();
 
     expect(mockTypecraft.stop).toHaveBeenCalled();
+  });
+
+  it('does not start automatically when autoStart is false', () => {
+    const options: TypecraftOptions = {
+      strings: ['Test'],
+      speed: { type: 50, delete: 50, delay: 1000 },
+      autoStart: false,
+      cursor: {
+        blink: true,
+        blinkSpeed: 530,
+        color: 'black',
+        opacity: { min: 0, max: 1 },
+        style: CursorStyle.Blink,
+        text: '|',
+      },
+      easingFunction: expect.any(Function),
+      html: false,
+      pauseFor: 1500,
+      loop: false,
+      direction: Direction.LTR,
+      textEffect: TextEffect.None,
+    };
+
+    render(<TypecraftFX {...options} />);
+
+    expect(TypecraftEngine).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      expect.objectContaining(options)
+    );
+    if (options.autoStart) {
+      expect(mockTypecraft.start).toHaveBeenCalled();
+    } else {
+      expect(mockTypecraft.start).not.toHaveBeenCalled();
+    }
   });
 });

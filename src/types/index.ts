@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+import { EasingManager } from '../core/managers/EasingManager';
 
 export interface CursorOptions {
   text: string;
@@ -18,6 +18,13 @@ export interface SpeedOptions {
   delay: number;
 }
 
+export type CustomEffectFunction = (
+  node: HTMLElement,
+  index: number,
+  speed: number,
+  easingManager: EasingManager
+) => void;
+
 export interface TypecraftClass {
   // Core methods
   start(): TypecraftClass;
@@ -28,7 +35,7 @@ export interface TypecraftClass {
   deleteAll(speed?: number): TypecraftClass;
   deleteChars(amount: number): TypecraftClass;
   pauseFor(ms: number): TypecraftClass;
-  changeDeleteSpeed(speed: number): TypecraftClass;
+  setSpeed(speed: number): TypecraftClass;
 
   // Options methods
   changeSettings(options: Partial<TypecraftOptions>): TypecraftClass;
@@ -45,7 +52,8 @@ export type EasingFunction = (t: number) => number;
 
 export interface TypecraftOptions {
   strings: string[];
-  speed: SpeedOptions | number;
+  fixedStringsIndexes?: number[];
+  speed: SpeedOptions;
   loop: boolean;
   autoStart: boolean;
   cursor: CursorOptions;
@@ -63,7 +71,7 @@ export interface TypecraftState {
   lastFrameTime: number | null;
   pauseUntil: number | null;
   cursorNode: HTMLElement | null;
-  currentSpeed: number | 'natural';
+  currentSpeed: number;
   eventQueue: (() => void)[];
   eventListeners: Map<string, EventCallback[]>;
   cursorBlinkState: boolean;
@@ -71,11 +79,6 @@ export interface TypecraftState {
   cursorPosition: number;
   lastOperation: QueueActionType | null;
 }
-
-export type EventQueue = Array<{
-  eventName: string;
-  eventArgs: any[];
-}>;
 
 export enum QueueActionType {
   TYPE = 'type',
@@ -86,10 +89,15 @@ export enum QueueActionType {
   CHANGE_DIRECTION = 'changeDirection',
   CHANGE_CURSOR = 'changeCursor',
   CHANGE_CURSOR_STYLE = 'changeCursorStyle',
-  CHANGE_TEXT_EFFECT = 'changeTextEffect',
-  DELETE_CHARACTER = 'deleteCharacter',
+  CHANGE_TEXT_EFFECT = 'setTextEffect',
+  DELETE_CHARACTERS = 'deleteChars',
   CALL_FUNCTION = 'callFunction',
   TYPE_CHARACTER = 'typeCharacter',
+  TYPE_HTML_TAG_OPEN = 'typeHtmlTagOpen',
+  TYPE_HTML_TAG_CLOSE = 'typeHtmlTagClose',
+  TYPE_HTML_CONTENT = 'typeHtmlContent',
+  WORD_REPLACE_START = 'wordReplaceStart',
+  WORD_REPLACE_END = 'wordReplaceEnd',
 }
 
 export interface QueueItem {
@@ -117,6 +125,8 @@ export enum NodeType {
   Character = 'character',
   HTMLTag = 'htmlTag',
   HTMLElement = 'htmlElement',
+  LineBreak = 'lineBreak',
+  Tab = 'tab',
 }
 
 export enum Direction {
@@ -137,6 +147,8 @@ export enum TextEffect {
   Glitch = 'glitch',
   Typecraft = 'typecraft',
   Rainbow = 'rainbow',
+  Continuous = 'continuous',
+  Custom = 'custom',
 }
 
 export type TypecraftEvent =
@@ -149,6 +161,21 @@ export type TypecraftEvent =
   | 'deleteSkipped'
   | 'pauseStart'
   | 'pauseEnd'
-  | 'complete';
+  | 'complete'
+  | 'wordReplaceStart'
+  | 'wordReplaceEnd';
 
 export type EventCallback = (...args: any[]) => void;
+
+export interface TypecraftContext {
+  typeCharacter: (payload: any) => Promise<void>;
+  typeHtmlTagOpen: (payload: any) => Promise<void>;
+  typeHtmlContent: (content: string) => Promise<void>;
+  typeHtmlTagClose: (payload: any) => Promise<void>;
+  deleteChars: (count: number) => Promise<void>;
+  wait: (ms: number) => Promise<void>;
+  typeString: (string: string) => void;
+  emit: (eventName: TypecraftEvent, payload?: any) => void;
+  getState: () => TypecraftState;
+  options: TypecraftOptions;
+}

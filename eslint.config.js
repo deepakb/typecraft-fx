@@ -20,7 +20,7 @@ export default [
       prettier: prettierPlugin,
     },
     rules: {
-      'no-unused-vars': 'error',
+      'no-unused-vars': 'off',
       'no-console': 'warn',
       'prefer-const': 'error',
       eqeqeq: ['error', 'always'],

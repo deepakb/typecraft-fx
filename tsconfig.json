@@ -14,7 +14,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "strictNullChecks": true,
+    "strictFunctionTypes": true
   },
   "include": ["src", "stories", "tests"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -1,362 +1,239 @@
 import {
   TypecraftOptions,
-  TypecraftState,
   QueueActionType,
   Direction,
-  CursorStyle,
   TextEffect,
   NodeType,
   TypecraftEvent,
   EventCallback,
   HTMLParseNode,
   EasingFunction,
-} from './types';
-import { CursorManager } from './CursorManager';
-import { QueueManager } from './QueueManager';
-import { TextEffectManager } from './TextEffectManager';
+  CustomEffectFunction,
+  CursorOptions,
+  SpeedOptions,
+  TypecraftContext,
+} from '../types';
+import { CursorManager, ICursorManager } from './managers/CursorManager';
+import { IQueueManager } from './managers/QueueManager';
+import { IEffectManager } from './managers/EffectManager';
+import { IOptionsManager } from './managers/OptionsManager';
+import { IStateManager } from './managers/StateManager';
+import { IStringManager } from './managers/StringManager';
+import { ISpeedManager } from './managers/SpeedManager';
+import { IEasingManager } from './managers/EasingManager';
+import { ErrorSeverity } from './error/TypecraftError';
+import { ITypecraftLogger } from './logging/TypecraftLogger';
+import { IManagerFactory } from './factories/ManagerFactory';
+import { ErrorHandler } from '../utils/ErrorHandler';
 
-export class TypecraftEngine {
+export interface ITypecraftEngine {
+  setSpeed(speed: number | Partial<SpeedOptions>): this;
+  getElement(): HTMLElement;
+  setEasingFunction(easing: EasingFunction): this;
+  setDirection(direction: Direction): this;
+  changeCursor(cursorOptions: Partial<CursorOptions>): void;
+  setTextEffect(effect: TextEffect): this;
+  pauseFor(ms: number): this;
+  start(): Promise<void>;
+  stop(): void;
+  on(eventName: TypecraftEvent, callback: EventCallback): this;
+  off(eventName: TypecraftEvent, callback: EventCallback): this;
+  callFunction(callback: () => void): this;
+  typeAllStrings(): this;
+  registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this;
+  typeString(string: string): this;
+  deleteChars(numChars?: number): Promise<void>;
+  typeAndReplace(words: string[], delay?: number): this;
+}
+
+export class TypecraftEngine implements ITypecraftEngine {
   private options: TypecraftOptions;
-  private state: TypecraftState;
+  private cursorManager: ICursorManager;
+  private queueManager: IQueueManager;
+  private effectManager: IEffectManager;
+  private optionsManager: IOptionsManager;
+  private stateManager: IStateManager;
+  private stringManager: IStringManager;
+  private speedManager: ISpeedManager;
+  private easingManager: IEasingManager;
   private rafId: number | null = null;
-  private cursorManager: CursorManager;
-  private queueManager: QueueManager;
-  private textEffectManager: TextEffectManager;
+  private lastFrameTime: number = 0;
 
-  constructor(element: string | HTMLElement, options: Partial<TypecraftOptions> = {}) {
-    this.validateElement(element);
-    this.options = this.mergeOptions(options);
-    this.state = this.initializeState(element);
-    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
-    this.cursorManager.updateCursorPosition(this.state.element);
-    this.queueManager = new QueueManager();
-    this.textEffectManager = new TextEffectManager();
-    this.init();
-  }
+  constructor(
+    element: string | HTMLElement,
+    options: Partial<TypecraftOptions> = {},
+    private logger: ITypecraftLogger,
+    private errorHandler: ErrorHandler,
+    private managerFactory: IManagerFactory
+  ) {
+    try {
+      const htmlElement = this.validateElement(element);
+      this.optionsManager = this.managerFactory.createOptionsManager(htmlElement, options);
+      this.options = this.optionsManager.getOptions();
+      this.stateManager = this.managerFactory.createStateManager(htmlElement, this.options);
+      this.queueManager = this.managerFactory.createQueueManager();
+      this.easingManager = this.managerFactory.createEasingManager(this.options);
+      this.effectManager = this.managerFactory.createEffectManager(this.easingManager);
+      this.stringManager = this.managerFactory.createStringManager(this.queueManager);
+      this.speedManager = this.managerFactory.createSpeedManager(this.options.speed);
+      this.cursorManager = this.managerFactory.createCursorManager(
+        this.stateManager.getState().element,
+        this.options.cursor
+      );
 
-  private validateElement(element: string | HTMLElement): void {
-    if (typeof element === 'string') {
-      const el = document.querySelector(element);
-      if (!el) {
-        throw new Error(`Element with selector "${element}" not found`);
-      }
-    } else if (!(element instanceof HTMLElement)) {
-      throw new Error('Invalid HTML element provided');
+      this.setSpeed(this.options.speed);
+      this.init();
+      this.logger.info('TypecraftEngine initialized', { element, options });
+    } catch (error) {
+      this.errorHandler.handleError(
+        error,
+        'Failed to initialize TypecraftEngine',
+        { element, options },
+        ErrorSeverity.CRITICAL
+      );
     }
-  }
-
-  private mergeOptions(options: Partial<TypecraftOptions>): TypecraftOptions {
-    const defaultOptions: TypecraftOptions = {
-      strings: [],
-      speed: 50,
-      pauseFor: 1500,
-      loop: false,
-      autoStart: false,
-      cursor: {
-        text: '|',
-        color: 'black',
-        blinkSpeed: 500,
-        opacity: { min: 0, max: 1 },
-        style: CursorStyle.Solid,
-        blink: false,
-      },
-      direction: Direction.LTR,
-      textEffect: TextEffect.None,
-      easingFunction: (t) => t,
-      html: false,
-    };
-
-    return {
-      ...defaultOptions,
-      ...options,
-      cursor: {
-        ...defaultOptions.cursor,
-        ...options.cursor,
-      },
-    };
-  }
-
-  private initializeState(element: string | HTMLElement): TypecraftState {
-    return {
-      element: typeof element === 'string' ? document.querySelector(element)! : element,
-      queue: [],
-      visibleNodes: [],
-      lastFrameTime: null,
-      pauseUntil: null,
-      cursorNode: null,
-      currentSpeed: typeof this.options.speed === 'number' ? this.options.speed : 'natural',
-      eventQueue: [],
-      eventListeners: new Map(),
-      cursorBlinkState: true,
-      lastCursorBlinkTime: 0,
-      cursorPosition: 0,
-      lastOperation: null,
-    };
   }
 
   private init(): void {
-    this.setupCursor();
-    this.state.element.style.direction = this.options.direction;
+    const state = this.stateManager.getState();
+    state.element.style.direction = this.options.direction;
 
-    if (this.options.autoStart && this.options.strings.length) {
-      this.typeOutAllStrings();
+    this.cursorManager.setupCursor(state.element);
+
+    if (
+      this.optionsManager.getOptions().autoStart &&
+      this.optionsManager.getOptions().strings.length
+    ) {
+      this.start();
     }
+    this.logger.debug('TypecraftEngine initialized');
   }
 
-  private defaultEasing: EasingFunction = (t: number) => t;
+  private startAnimationLoop(): void {
+    const animate = (currentTime: number) => {
+      if (this.lastFrameTime === 0) {
+        this.lastFrameTime = currentTime;
+      }
 
-  private getEasing(): EasingFunction {
-    return this.options.easingFunction || this.defaultEasing;
+      this.update(currentTime);
+
+      this.lastFrameTime = currentTime;
+      this.rafId = window.requestAnimationFrame(animate);
+    };
+
+    this.rafId = window.requestAnimationFrame(animate);
+    this.logger.debug('Animation loop started');
   }
 
-  public setEasingFunction(easing: EasingFunction): this {
-    this.options.easingFunction = easing;
+  private update(currentTime: number): void {
+    this.cursorManager.updateBlink(currentTime);
+  }
+
+  public setSpeed(speed: number | Partial<SpeedOptions>): this {
+    this.speedManager.setSpeed(speed);
     return this;
   }
 
-  public changeEasingFunction(easing: EasingFunction): this {
-    this.options.easingFunction = easing;
-    return this;
-  }
-
-  public setDirection(direction: Direction): this {
-    this.options.direction = direction;
-    this.state.element.style.direction = direction;
-    return this;
-  }
-
-  public changeSpeed(speed: number): this {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.type = speed;
-      this.options.speed.delete = speed;
-    } else {
-      this.options.speed = speed;
-    }
-    return this;
-  }
-
-  public changeCursor(cursor: string): this {
-    this.options.cursor.text = cursor;
-    if (this.state.cursorNode) {
-      this.state.cursorNode.textContent = cursor;
-    }
-    return this;
-  }
-
-  public changeTypeSpeed(speed: number): this {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.type = speed;
-    } else {
-      this.options.speed = { type: speed, delete: speed, delay: 1500 };
-    }
-    return this;
-  }
-
-  public changeDeleteSpeed(speed: number): this {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.delete = speed;
-    } else {
-      this.options.speed = { type: speed, delete: speed, delay: 1500 };
-    }
-    return this;
-  }
-
-  public changeDelaySpeed(delay: number): this {
-    if (typeof this.options.speed === 'object') {
-      this.options.speed.delay = delay;
-    } else {
-      this.options.speed = { type: 50, delete: 50, delay: delay };
-    }
-    return this;
-  }
-
-  public typeString(string: string): this {
-    string.split('').forEach((char) => {
-      this.addToQueue(QueueActionType.TYPE_CHARACTER, { char });
-    });
-    return this;
-  }
-
-  public deleteChars(numChars: number): this {
-    for (let i = 0; i < numChars; i++) {
-      this.addToQueue(QueueActionType.DELETE_CHARACTER);
-    }
-    return this;
-  }
-
-  public deleteAll(): this {
-    return this.deleteChars(this.state.visibleNodes.length);
-  }
-
-  public pauseFor(ms: number): this {
-    this.addToQueue(QueueActionType.PAUSE, { ms });
-    return this;
-  }
-
-  private setupCursor(): void {
-    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
-  }
-
-  private updateCursorStyle(): void {
-    if (this.state.cursorNode) {
-      this.state.cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.cursor.style}`;
-      this.state.cursorNode.style.color = this.options.cursor.color;
-    }
-  }
-
-  public changeCursorStyle(style: CursorStyle): this {
-    this.options.cursor.style = style;
-    this.cursorManager.changeCursorStyle(style);
-    return this;
-  }
-
-  public changeTextEffect(effect: TextEffect): this {
-    this.options.textEffect = effect;
-    return this;
+  public getElement(): HTMLElement {
+    return this.stateManager.getState().element;
   }
 
   private resetState(): void {
-    this.state.visibleNodes = [];
-    this.state.element.innerHTML = '';
+    this.stateManager.clearVisibleNodes();
+    const state = this.stateManager.getState();
+    state.element.innerHTML = '';
     if (this.cursorManager) {
-      this.cursorManager.removeCursor();
+      this.cursorManager.remove();
     }
-    this.cursorManager = new CursorManager(this.state.element, this.options.cursor);
-    this.cursorManager.updateCursorPosition(this.state.element);
+    this.cursorManager = new CursorManager(
+      state.element,
+      this.options.cursor,
+      this.logger,
+      this.errorHandler
+    );
+    this.cursorManager.updateCursorPosition(state.element);
+    this.logger.debug('State reset');
   }
 
-  public start(): Promise<void> {
-    this.resetState();
-    // this.setupCursor();
-    // this.updateCursorPosition();
-    this.updateCursorStyle();
-    if (this.options.strings.length && !this.state.queue.length) {
-      this.typeOutAllStrings();
-    }
-    return new Promise((resolve) => {
-      this.runQueue().then(() => {
-        resolve();
-      });
-    });
-  }
-
-  public stop(): void {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-    }
-    this.queueManager.clear();
-  }
-
-  public on(eventName: TypecraftEvent, callback: EventCallback): this {
-    if (!this.state.eventListeners.has(eventName)) {
-      this.state.eventListeners.set(eventName, []);
-    }
-    this.state.eventListeners.get(eventName)!.push(callback);
-    return this;
-  }
-
-  public off(eventName: TypecraftEvent, callback: EventCallback): this {
-    const listeners = this.state.eventListeners.get(eventName);
+  private emit(eventName: TypecraftEvent, payload?: any): void {
+    const listeners = this.stateManager.getEventListeners(eventName);
     if (listeners) {
-      const index = listeners.indexOf(callback);
-      if (index !== -1) {
-        listeners.splice(index, 1);
-      }
+      listeners.forEach((callback) => callback(payload));
     }
-    return this;
-  }
-
-  public callFunction(callback: () => void): this {
-    this.addToQueue(QueueActionType.CALL_FUNCTION, { callback });
-    return this;
-  }
-
-  public typeOutAllStrings(): this {
-    this.state.queue = [];
-
-    this.options.strings.forEach((string, index) => {
-      // Type the string
-      this.typeString(string);
-
-      // If it's not the last string, add pause and delete actions
-      if (index !== this.options.strings.length - 1) {
-        this.pauseFor(this.options.pauseFor);
-        this.deleteAll();
-      }
-    });
-
-    if (this.options.loop) {
-      this.addToQueue(QueueActionType.LOOP);
-    }
-
-    return this;
-  }
-
-  private emit(eventName: TypecraftEvent, ...args: any[]): void {
-    const listeners = this.state.eventListeners.get(eventName);
-    if (listeners) {
-      listeners.forEach((callback) => callback(...args));
-    }
-  }
-
-  private addToQueue(actionType: QueueActionType, payload?: any): void {
-    this.queueManager.add({ type: actionType, payload });
+    this.logger.debug('Event emitted', { eventName, payload });
   }
 
   private async runQueue(): Promise<void> {
-    const queueItem = this.queueManager.getNext();
-    if (!queueItem) {
+    const context: TypecraftContext = {
+      typeCharacter: this.typeCharacter.bind(this),
+      typeHtmlTagOpen: this.typeHtmlTagOpen.bind(this),
+      typeHtmlContent: this.typeHtmlContent.bind(this),
+      typeHtmlTagClose: this.typeHtmlTagClose.bind(this),
+      deleteChars: this.deleteChars.bind(this),
+      wait: this.wait.bind(this),
+      typeString: this.typeString.bind(this),
+      emit: (eventName: TypecraftEvent, payload?: any) => this.emit(eventName, payload),
+      getState: this.stateManager.getState.bind(this.stateManager),
+      options: this.options,
+    };
+
+    try {
+      await this.queueManager.processQueue(context);
       this.emit('complete');
       if (this.options.loop) {
-        this.typeOutAllStrings();
+        this.typeAllStrings();
         await this.runQueue();
       } else {
         this.checkOperationComplete();
       }
-      return;
+    } catch (error) {
+      this.errorHandler.handleError(error, 'Failed to process queue', {}, ErrorSeverity.HIGH);
     }
+  }
 
-    const { type, payload } = queueItem;
-    this.state.lastOperation = type;
-
-    switch (type) {
-      case QueueActionType.TYPE:
-      case QueueActionType.TYPE_CHARACTER:
-        await this.typeCharacter(payload);
-        break;
-      case QueueActionType.DELETE:
-      case QueueActionType.DELETE_CHARACTER:
-        if (this.state.visibleNodes.length > 0) {
-          await this.deleteCharacter();
-        } else {
-          this.emit('deleteSkipped');
-        }
-        break;
-      case QueueActionType.PAUSE:
-        await this.wait(payload.ms);
-        break;
-      case QueueActionType.CALLBACK:
-      case QueueActionType.CALL_FUNCTION:
-        await Promise.resolve(payload.callback());
-        break;
-      case QueueActionType.LOOP:
-        this.typeOutAllStrings();
-        this.emit('complete');
-        break;
-      default:
-        // eslint-disable-next-line no-console
-        console.warn(`Unknown queue action type: ${type}`);
+  private async typeHtmlTagOpen(payload: {
+    tagName: string;
+    attributes: NamedNodeMap;
+  }): Promise<void> {
+    const { tagName, attributes } = payload;
+    const element = document.createElement(tagName);
+    for (let i = 0; i < attributes.length; i++) {
+      const attr = attributes[i];
+      element.setAttribute(attr.name, attr.value);
     }
+    const state = this.stateManager.getState();
+    state.element.insertBefore(element, this.cursorManager.getCursorElement());
+    this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: element });
+    this.cursorManager.updateCursorPosition(state.element);
+    const { type } = this.speedManager.getSpeed();
+    await this.wait(type);
+  }
 
-    // Continue processing the queue
-    await this.runQueue();
+  private async typeHtmlTagClose(payload: { tagName: string }): Promise<void> {
+    const state = this.stateManager.getState();
+    const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+    if (
+      lastNode &&
+      lastNode.type === NodeType.HTMLElement &&
+      (lastNode.node as HTMLElement).tagName.toLowerCase() === payload.tagName.toLowerCase()
+    ) {
+      const nextSibling = lastNode.node.nextSibling;
+      if (nextSibling instanceof HTMLElement) {
+        this.cursorManager.updateCursorPosition(nextSibling);
+      } else {
+        this.cursorManager.updateCursorPosition(state.element);
+      }
+    }
+    const { type } = this.speedManager.getSpeed();
+    await this.wait(type);
   }
 
   private checkOperationComplete(): void {
-    if (this.state.queue.length === 0) {
-      if (this.state.lastOperation === QueueActionType.TYPE_CHARACTER) {
+    const state = this.stateManager.getState();
+    if (state.queue.length === 0) {
+      if (state.lastOperation === QueueActionType.TYPE_CHARACTER) {
         this.emit('typeComplete');
-      } else if (this.state.lastOperation === QueueActionType.DELETE_CHARACTER) {
+      } else if (state.lastOperation === QueueActionType.DELETE_CHARACTERS) {
         this.emit('deleteComplete');
       }
       this.emit('complete');
@@ -398,69 +275,69 @@ export class TypecraftEngine {
     return nodes;
   }
 
-  private async typeCharacter(payload: { char: string }): Promise<void> {
-    const { char } = payload;
-    const charSpan = document.createElement('span');
-    charSpan.textContent = char;
-    this.state.element.insertBefore(charSpan, this.cursorManager.getCursorElement());
-    this.state.visibleNodes.push({ type: NodeType.Character, node: charSpan });
-    this.cursorManager.updateCursorPosition(this.state.element);
+  private async typeCharacter({ char, color }: { char: string; color?: string }): Promise<void> {
+    const state = this.stateManager.getState();
 
-    const typeSpeed =
-      typeof this.options.speed === 'number' ? this.options.speed : this.options.speed.type;
+    if (char === '\n') {
+      const br = document.createElement('br');
+      state.element.appendChild(br);
+      this.stateManager.updateVisibleNodes({ type: NodeType.LineBreak, node: br });
+    } else if (char === '\t') {
+      const tabSpan = document.createElement('span');
+      tabSpan.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
+      state.element.appendChild(tabSpan);
+      this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: tabSpan });
+    } else {
+      let lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+      if (!lastNode || lastNode.type !== NodeType.Character) {
+        const span = document.createElement('span');
+        state.element.appendChild(span);
+        if (color) {
+          span.style.color = color;
+        }
+        lastNode = { type: NodeType.Character, node: span };
+        this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
+      }
+      if (lastNode.node instanceof HTMLElement) {
+        if (color && lastNode.node.style.color !== color) {
+          const span = document.createElement('span');
+          span.style.color = color;
+          span.textContent = char;
+          state.element.appendChild(span);
+          this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
+        } else {
+          (lastNode.node as HTMLElement).textContent += char;
+        }
+      }
+    }
+
+    this.cursorManager.updateCursorPosition(state.element);
+
+    const typeSpeed = this.options.speed.type;
     await new Promise((resolve) => setTimeout(resolve, typeSpeed));
 
     await this.applyTextEffect(this.options.textEffect);
     this.emit('typeChar', { char });
   }
 
-  private async deleteCharacter(): Promise<void> {
-    if (this.state.visibleNodes.length > 0) {
-      const lastNode = this.state.visibleNodes.pop();
-      if (lastNode && lastNode.node.parentNode) {
-        lastNode.node.parentNode.removeChild(lastNode.node);
+  private async typeHtmlContent(content: string): Promise<void> {
+    const state = this.stateManager.getState();
+    const currentNode = state.visibleNodes[state.visibleNodes.length - 1];
+
+    if (currentNode && currentNode.type === NodeType.HTMLElement) {
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        const textNode = document.createTextNode(char);
+        (currentNode.node as HTMLElement).appendChild(textNode);
+        this.stateManager.updateVisibleNodes({
+          type: NodeType.Character,
+          node: textNode.parentElement as HTMLElement,
+        });
+        this.cursorManager.updateCursorPosition(state.element);
+        const { type } = this.speedManager.getSpeed();
+        await this.wait(type);
+        this.emit('typeChar', { char });
       }
-      this.cursorManager.updateCursorPosition(this.state.element);
-      const deleteSpeed =
-        typeof this.options.speed === 'number'
-          ? this.options.speed
-          : this.options.speed.delete || 50;
-      await this.wait(deleteSpeed);
-      this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
-    }
-  }
-
-  private getTypeSpeed(): number {
-    const speed =
-      typeof this.options.speed === 'object' ? this.options.speed.type : this.options.speed;
-    if (typeof speed === 'number') {
-      const easing = this.getEasing();
-      return easing(speed);
-    } else if (speed === 'natural') {
-      return Math.random() * (150 - 50) + 50;
-    } else {
-      return 50; // Default value if speed is neither a number nor 'natural'
-    }
-  }
-
-  private animateCursor(): void {
-    if (!this.state.cursorNode) {
-      return;
-    }
-
-    const now = Date.now();
-    const delta = now - (this.state.lastCursorBlinkTime || 0);
-
-    if (delta >= this.options.cursor.blinkSpeed) {
-      this.state.cursorBlinkState = !this.state.cursorBlinkState;
-      this.state.cursorNode.style.opacity = this.state.cursorBlinkState
-        ? this.options.cursor.opacity.max.toString()
-        : this.options.cursor.opacity.min.toString();
-      this.state.lastCursorBlinkTime = now;
-    }
-
-    if (this.options.cursor.blink) {
-      this.rafId = requestAnimationFrame(() => this.animateCursor());
     }
   }
 
@@ -469,17 +346,19 @@ export class TypecraftEngine {
       return;
     }
 
-    const nodes = this.state.visibleNodes
+    const state = this.stateManager.getState();
+    const nodes = state.visibleNodes
       .filter((node) => node.type === NodeType.Character)
       .map((node) => node.node as HTMLElement);
 
-    for (let i = 0; i < nodes.length; i++) {
-      await this.textEffectManager.applyTextEffect(effect, nodes[i], i, () => this.getTypeSpeed());
-    }
+    const { type } = this.speedManager.getSpeed();
+    await Promise.all(
+      nodes.map((node, i) => this.effectManager.applyTextEffect(effect, node, i, type))
+    );
 
     await Promise.resolve();
 
-    this.textEffectManager.resetEffectStyles(nodes, effect);
+    this.effectManager.resetEffectStyles(nodes, effect);
   }
 
   private async wait(ms: number): Promise<void> {
@@ -489,5 +368,229 @@ export class TypecraftEngine {
         resolve();
       }, ms);
     });
+  }
+
+  public setEasingFunction(easing: EasingFunction): this {
+    this.easingManager.setEasingFunction(easing);
+    return this;
+  }
+
+  public setDirection(direction: Direction): this {
+    this.options.direction = direction;
+    const state = this.stateManager.getState();
+    state.element.style.direction = direction;
+    return this;
+  }
+
+  public changeCursor(cursorOptions: Partial<CursorOptions>): void {
+    this.cursorManager.changeCursor(cursorOptions);
+  }
+
+  public setTextEffect(effect: TextEffect): this {
+    this.optionsManager.updateOptions({ textEffect: effect });
+    return this;
+  }
+
+  public pauseFor(ms: number): this {
+    this.queueManager.addPause(ms);
+    return this;
+  }
+
+  public start(): Promise<void> {
+    try {
+      this.resetState();
+      this.cursorManager.updateCursorStyle();
+      const state = this.stateManager.getState();
+      if (this.options.strings.length && !state.queue.length) {
+        this.typeAllStrings();
+      }
+      if (!this.rafId) {
+        this.startAnimationLoop();
+      }
+      this.logger.info('TypecraftEngine started');
+      return this.runQueue();
+    } catch (error) {
+      return this.errorHandler.handleError(
+        error,
+        'Failed to start TypecraftEngine',
+        {},
+        ErrorSeverity.HIGH
+      );
+    }
+  }
+
+  public stop(): void {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.queueManager.clear();
+    this.logger.info('TypecraftEngine stopped');
+  }
+
+  public on(eventName: TypecraftEvent, callback: EventCallback): this {
+    this.stateManager.addEventListener(eventName, callback);
+    return this;
+  }
+
+  public off(eventName: TypecraftEvent, callback: EventCallback): this {
+    this.stateManager.removeEventListener(eventName, callback);
+    return this;
+  }
+
+  public callFunction(callback: () => void): this {
+    this.queueManager.addFunction(callback);
+    return this;
+  }
+
+  public typeAllStrings(): this {
+    this.queueManager.clear();
+    const fixedStringsIndexes = this.options.fixedStringsIndexes || [];
+    const allStrings = this.options.strings;
+
+    let currentIndex = 0;
+    while (currentIndex < allStrings.length) {
+      if (fixedStringsIndexes.includes(currentIndex)) {
+        // Type fixed string
+        this.stringManager.typeString(allStrings[currentIndex], this.options.html);
+        this.pauseFor(this.options.pauseFor);
+        currentIndex++;
+      } else {
+        // Find the next fixed string or the end of the array
+        const nextFixedIndex =
+          fixedStringsIndexes.find((index) => index > currentIndex) || allStrings.length;
+
+        // Type and loop through non-fixed strings until the next fixed string
+        for (let i = currentIndex; i < nextFixedIndex; i++) {
+          this.stringManager.typeString(allStrings[i], this.options.html);
+          this.pauseFor(this.options.pauseFor);
+
+          if (i < nextFixedIndex - 1 || (i === allStrings.length - 1 && this.options.loop)) {
+            this.stringManager.deleteAll(allStrings[i].length);
+          }
+        }
+
+        if (this.options.loop && nextFixedIndex < allStrings.length) {
+          this.queueManager.add({
+            type: QueueActionType.LOOP,
+            payload: { startIndex: currentIndex, endIndex: nextFixedIndex - 1 },
+          });
+        }
+
+        currentIndex = nextFixedIndex;
+      }
+    }
+
+    if (this.options.loop) {
+      this.queueManager.add({
+        type: QueueActionType.LOOP,
+        payload: { startIndex: 0, endIndex: allStrings.length - 1 },
+      });
+    }
+
+    return this;
+  }
+
+  public registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this {
+    this.effectManager.registerCustomEffect(name, effectFunction);
+    return this;
+  }
+
+  public typeString(string: string): this {
+    this.stringManager.typeString(string, this.options.html);
+    return this;
+  }
+
+  public async deleteChars(numChars: number = 1): Promise<void> {
+    this.logger.info('Deleting characters:', { numChars });
+    const state = this.stateManager.getState();
+
+    for (let i = 0; i < numChars; i++) {
+      if (!state.visibleNodes || state.visibleNodes.length === 0) {
+        this.logger.warn('No more visible nodes to delete');
+        break;
+      }
+
+      const lastNode = state.visibleNodes[state.visibleNodes.length - 1];
+
+      try {
+        if (lastNode.type === NodeType.Character) {
+          const span = lastNode.node as HTMLElement;
+          const text = span.textContent || '';
+          if (text.length > 1) {
+            span.textContent = text.slice(0, -1);
+            this.logger.debug('Character deleted from span, new content:', {
+              el: span.textContent,
+            });
+          } else {
+            this.stateManager.removeLastVisibleNode();
+            span.parentNode?.removeChild(span);
+            this.logger.debug('Span removed');
+          }
+        } else {
+          this.stateManager.removeLastVisibleNode();
+          lastNode.node.parentNode?.removeChild(lastNode.node);
+          this.logger.debug('Non-character node removed');
+        }
+
+        this.cursorManager.updateCursorPosition(state.element);
+        this.logger.debug('Cursor position updated');
+
+        const { delete: deleteSpeed } = this.speedManager.getSpeed();
+        await this.wait(deleteSpeed);
+        this.emit('deleteChar', { char: lastNode?.node.textContent || '' });
+      } catch (error) {
+        this.errorHandler.handleError(
+          error,
+          'Error in deleteChars',
+          { numChars },
+          ErrorSeverity.HIGH
+        );
+      }
+    }
+
+    // Update the element's text content after deletion
+    state.element.textContent = state.visibleNodes.map((node) => node.node.textContent).join('');
+  }
+
+  public typeAndReplace(words: string[], delay: number = 1000): this {
+    const typeWord = (index: number) => {
+      this.stringManager.typeWord(words[index]);
+      this.pauseFor(delay);
+      this.deleteChars(words[index].length + 1); // +1 for the space
+      this.callFunction(() => {
+        const nextIndex = (index + 1) % words.length;
+        typeWord(nextIndex);
+      });
+    };
+
+    typeWord(0);
+    return this;
+  }
+
+  private validateElement(element: string | HTMLElement): HTMLElement {
+    let htmlElement: HTMLElement;
+    if (typeof element === 'string') {
+      const el = document.querySelector(element);
+      if (!el || !(el instanceof HTMLElement)) {
+        this.errorHandler.handleError(
+          new Error('Invalid element selector'),
+          'Element not found or is not an HTMLElement',
+          { element },
+          ErrorSeverity.HIGH
+        );
+      }
+      htmlElement = el as HTMLElement;
+    } else if (!(element instanceof HTMLElement)) {
+      this.errorHandler.handleError(
+        new Error('Invalid element'),
+        'Provided element is not an HTMLElement',
+        { element },
+        ErrorSeverity.HIGH
+      );
+    } else {
+      htmlElement = element;
+    }
+    return htmlElement;
   }
 }

@@ -49,16 +49,16 @@ import { Typecraft } from 'typecraft-fx';
 ### Lazy Loading (larger initial bundle, but with code splitting)
 
 ```jsx
-import { TypecraftComponent } from 'typecraft-fx';
+import { TypecraftFX } from 'typecraft-fx';
 ```
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent } from 'typecraft-fx';
+import { TypecraftFX } from 'typecraft-fx';
 
 const MyComponent = () => {
   return (
-    <TypecraftComponent
+    <TypecraftFX
       onInit={(typecraft) => {
         typecraft
           .typeString('Hello World!')
@@ -78,11 +78,11 @@ export default MyComponent;
 
 ```jsx
 import React from 'react';
-import { TypecraftComponent, TextEffect, CursorStyle } from 'typecraft-fx';
+import { TypecraftFX, TextEffect, CursorStyle } from 'typecraft-fx';
 
 const AdvancedComponent = () => {
   return (
-    <TypecraftComponent
+    <TypecraftFX
       options={{
         strings: ['First sentence.', 'Second sentence.'],
         autoStart: true,
@@ -92,7 +92,7 @@ const AdvancedComponent = () => {
       }}
       onInit={(typecraft) => {
         typecraft
-          .changeTextEffect(TextEffect.FadeIn)
+          .setTextEffect(TextEffect.FadeIn)
           .typeString('This text will fade in.')
           .pauseFor(1000)
           .deleteAll()
@@ -146,7 +146,7 @@ If you're not using React, you can still use TypecraftFX with vanilla JavaScript
 
 ## API Reference
 
-### TypecraftComponent Props
+### TypecraftFX Props
 
 | Prop               | Type                             | Description                                             |
 | ------------------ | -------------------------------- | ------------------------------------------------------- |
@@ -173,7 +173,7 @@ If you're not using React, you can still use TypecraftFX with vanilla JavaScript
 | `start()`                  | Starts the typecraft effect.                     |
 | `stop()`                   | Stops the typecraft effect.                      |
 | `changeCursorStyle(style)` | Changes the cursor style.                        |
-| `changeTextEffect(effect)` | Changes the text effect.                         |
+| `setTextEffect(effect)`    | Changes the text effect.                         |
 
 ### TypecraftOptions
 
