@@ -4,7 +4,7 @@ import { TypecraftOptions, EventCallback, TypecraftEvent } from '../types';
 import { DEFAULT_OPTIONS } from '../constants';
 import { ManagerFactory } from '../core/factories/ManagerFactory';
 import { ErrorHandler } from '../utils/ErrorHandler';
-import { logger } from '../core/TypecraftLogger';
+import { logger } from '../core/logging/TypecraftLogger';
 
 export interface UseTypecraftFXProps {
   options?: Partial<TypecraftOptions>;

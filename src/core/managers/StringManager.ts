@@ -1,7 +1,7 @@
 import { QueueManager } from './QueueManager';
 import { QueueActionType } from '../../types';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 
 export interface IStringManager {

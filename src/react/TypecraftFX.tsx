@@ -8,8 +8,8 @@ import React, {
 } from 'react';
 import { TypecraftEngine } from '../core/TypecraftEngine';
 import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../types';
-import { ErrorCode, TypecraftError } from '../core/TypecraftError';
-import { ITypecraftLogger, logger } from '../core/TypecraftLogger';
+import { ErrorCode, TypecraftError } from '../core/error/TypecraftError';
+import { ITypecraftLogger, logger } from '../core/logging/TypecraftLogger';
 import { ManagerFactory } from '../core/factories/ManagerFactory';
 import { ErrorHandler } from '../utils/ErrorHandler';
 

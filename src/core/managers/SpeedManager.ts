@@ -1,6 +1,6 @@
 import { SpeedOptions } from '../../types';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import {
   SpeedOptionsSchema,
   SpeedOptionsSchemaType,

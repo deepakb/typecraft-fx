@@ -1,7 +1,7 @@
 import { EasingManager } from '../managers/EasingManager';
-import { ErrorCode, TypecraftError, ErrorSeverity } from '../TypecraftError';
+import { ErrorCode, TypecraftError, ErrorSeverity } from '../error/TypecraftError';
 import { CustomEffectFunction, TextEffect } from '../../types';
-import { logger } from '../TypecraftLogger';
+import { logger } from '../logging/TypecraftLogger';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 
 export interface IBaseEffect {

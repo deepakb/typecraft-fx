@@ -6,8 +6,8 @@ import {
   EventCallback,
 } from '../../types';
 import { ErrorHandler } from '../../utils/ErrorHandler';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 
 export interface IStateManager {
   getState(): TypecraftState;

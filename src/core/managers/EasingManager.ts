@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 
 const EasingFunctionSchema = z.function().args(z.number()).returns(z.number());

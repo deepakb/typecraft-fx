@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
-import { TypecraftError, ErrorCode, ErrorSeverity } from './TypecraftError';
-import { ErrorHandler } from '../utils/ErrorHandler';
+import { TypecraftError, ErrorCode, ErrorSeverity } from '../error/TypecraftError';
+import { ErrorHandler } from '../../utils/ErrorHandler';
 
 export enum LogLevel {
   ERROR = 'ERROR',

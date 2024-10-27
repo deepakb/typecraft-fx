@@ -6,7 +6,7 @@ import { IQueueManager, QueueManager } from '../managers/QueueManager';
 import { ISpeedManager, SpeedManager } from '../managers/SpeedManager';
 import { IStateManager, StateManager } from '../managers/StateManager';
 import { IStringManager, StringManager } from '../managers/StringManager';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { CursorOptions, SpeedOptions, TypecraftOptions } from '../../types';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 

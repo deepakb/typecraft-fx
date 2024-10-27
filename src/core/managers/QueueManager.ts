@@ -1,7 +1,7 @@
 import { QueueItem, QueueActionType, TypecraftContext } from '../../types';
 import { ErrorHandler } from '../../utils/ErrorHandler';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 
 export interface IQueueManager {
   add(item: QueueItem): void;
@@ -148,7 +148,22 @@ export class QueueManager implements IQueueManager {
         }
         break;
       case QueueActionType.LOOP:
-        context.typeAllStrings();
+        const { startIndex, endIndex } = item.payload;
+        const { strings, fixedStringsIndexes, pauseFor, loop } = context.options;
+
+        for (let i = startIndex; i <= endIndex; i++) {
+          if (!fixedStringsIndexes?.includes(i)) {
+            await context.typeString(strings[i]);
+            await context.wait(pauseFor);
+            if (i < endIndex || loop) {
+              await context.deleteChars(strings[i].length);
+            }
+          }
+        }
+
+        if (loop) {
+          this.add(item);
+        }
         break;
       default:
         this.logger.warn('Unknown queue action type', { type: item.type });

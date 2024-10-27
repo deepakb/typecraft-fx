@@ -52,6 +52,7 @@ export type EasingFunction = (t: number) => number;
 
 export interface TypecraftOptions {
   strings: string[];
+  fixedStringsIndexes?: number[];
   speed: SpeedOptions;
   loop: boolean;
   autoStart: boolean;
@@ -173,7 +174,7 @@ export interface TypecraftContext {
   typeHtmlTagClose: (payload: any) => Promise<void>;
   deleteChars: (count: number) => Promise<void>;
   wait: (ms: number) => Promise<void>;
-  typeAllStrings: () => void;
+  typeString: (string: string) => void;
   emit: (eventName: TypecraftEvent, payload?: any) => void;
   getState: () => TypecraftState;
   options: TypecraftOptions;

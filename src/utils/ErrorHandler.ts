@@ -1,5 +1,5 @@
-import { TypecraftError, ErrorCode, ErrorSeverity } from '../core/TypecraftError';
-import { ITypecraftLogger } from '../core/TypecraftLogger';
+import { TypecraftError, ErrorCode, ErrorSeverity } from '../core/error/TypecraftError';
+import { ITypecraftLogger } from '../core/logging/TypecraftLogger';
 
 export class ErrorHandler {
   constructor(private logger: ITypecraftLogger) {}

@@ -1,7 +1,7 @@
 import { EasingManager } from './EasingManager';
 import { CustomEffectFunction, TextEffect } from '../../types';
-import { ErrorSeverity } from '../TypecraftError';
-import { ITypecraftLogger } from '../TypecraftLogger';
+import { ErrorSeverity } from '../error/TypecraftError';
+import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { EffectFactory, BaseEffect } from '../factories/EffectFactory';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 

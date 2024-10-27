@@ -21,8 +21,8 @@ import { IStateManager } from './managers/StateManager';
 import { IStringManager } from './managers/StringManager';
 import { ISpeedManager } from './managers/SpeedManager';
 import { IEasingManager } from './managers/EasingManager';
-import { ErrorSeverity } from './TypecraftError';
-import { ITypecraftLogger } from './TypecraftLogger';
+import { ErrorSeverity } from './error/TypecraftError';
+import { ITypecraftLogger } from './logging/TypecraftLogger';
 import { IManagerFactory } from './factories/ManagerFactory';
 import { ErrorHandler } from '../utils/ErrorHandler';
 
@@ -171,7 +171,7 @@ export class TypecraftEngine implements ITypecraftEngine {
       typeHtmlTagClose: this.typeHtmlTagClose.bind(this),
       deleteChars: this.deleteChars.bind(this),
       wait: this.wait.bind(this),
-      typeAllStrings: this.typeAllStrings.bind(this),
+      typeString: this.typeString.bind(this),
       emit: (eventName: TypecraftEvent, payload?: any) => this.emit(eventName, payload),
       getState: this.stateManager.getState.bind(this.stateManager),
       options: this.options,
@@ -445,19 +445,47 @@ export class TypecraftEngine implements ITypecraftEngine {
 
   public typeAllStrings(): this {
     this.queueManager.clear();
-    const state = this.stateManager.getState();
+    const fixedStringsIndexes = this.options.fixedStringsIndexes || [];
+    const allStrings = this.options.strings;
 
-    this.options.strings.forEach((string, index) => {
-      this.stringManager.typeString(string, this.options.html);
-
-      if (index !== this.options.strings.length - 1) {
+    let currentIndex = 0;
+    while (currentIndex < allStrings.length) {
+      if (fixedStringsIndexes.includes(currentIndex)) {
+        // Type fixed string
+        this.stringManager.typeString(allStrings[currentIndex], this.options.html);
         this.pauseFor(this.options.pauseFor);
-        this.stringManager.deleteAll(state.visibleNodes.length);
+        currentIndex++;
+      } else {
+        // Find the next fixed string or the end of the array
+        const nextFixedIndex =
+          fixedStringsIndexes.find((index) => index > currentIndex) || allStrings.length;
+
+        // Type and loop through non-fixed strings until the next fixed string
+        for (let i = currentIndex; i < nextFixedIndex; i++) {
+          this.stringManager.typeString(allStrings[i], this.options.html);
+          this.pauseFor(this.options.pauseFor);
+
+          if (i < nextFixedIndex - 1 || (i === allStrings.length - 1 && this.options.loop)) {
+            this.stringManager.deleteAll(allStrings[i].length);
+          }
+        }
+
+        if (this.options.loop && nextFixedIndex < allStrings.length) {
+          this.queueManager.add({
+            type: QueueActionType.LOOP,
+            payload: { startIndex: currentIndex, endIndex: nextFixedIndex - 1 },
+          });
+        }
+
+        currentIndex = nextFixedIndex;
       }
-    });
+    }
 
     if (this.options.loop) {
-      this.queueManager.add({ type: QueueActionType.LOOP, payload: {} });
+      this.queueManager.add({
+        type: QueueActionType.LOOP,
+        payload: { startIndex: 0, endIndex: allStrings.length - 1 },
+      });
     }
 
     return this;
