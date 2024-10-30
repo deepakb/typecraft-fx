@@ -35,6 +35,7 @@ export const TypecraftOptionsSchema = z.object({
   textEffect: z.nativeEnum(TextEffect),
   easingFunction: z.function().returns(z.number()),
   html: z.boolean(),
+  loopLastString: z.boolean(),
 });
 
 export type TypecraftOptionsSchemaType = z.infer<typeof TypecraftOptionsSchema>;

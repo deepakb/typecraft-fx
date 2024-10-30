@@ -39,14 +39,17 @@ export interface ITypecraftEngine {
   on(eventName: TypecraftEvent, callback: EventCallback): this;
   off(eventName: TypecraftEvent, callback: EventCallback): this;
   callFunction(callback: () => void): this;
-  typeAllStrings(): this;
+  typeAllStrings(): void;
   registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this;
   typeString(string: string): this;
   deleteChars(numChars?: number): Promise<void>;
+  deleteHtmlNode: (payload: { index: number }) => Promise<void>;
   typeAndReplace(words: string[], delay?: number): this;
+  setLoopLastString(value: boolean): this;
 }
 
 export class TypecraftEngine implements ITypecraftEngine {
+  private isStarted: boolean = false;
   private options: TypecraftOptions;
   private cursorManager: ICursorManager;
   private queueManager: IQueueManager;
@@ -115,7 +118,7 @@ export class TypecraftEngine implements ITypecraftEngine {
         this.lastFrameTime = currentTime;
       }
 
-      this.update(currentTime);
+      this.updateBlink(currentTime);
 
       this.lastFrameTime = currentTime;
       this.rafId = window.requestAnimationFrame(animate);
@@ -125,7 +128,7 @@ export class TypecraftEngine implements ITypecraftEngine {
     this.logger.debug('Animation loop started');
   }
 
-  private update(currentTime: number): void {
+  private updateBlink(currentTime: number): void {
     this.cursorManager.updateBlink(currentTime);
   }
 
@@ -143,15 +146,15 @@ export class TypecraftEngine implements ITypecraftEngine {
     const state = this.stateManager.getState();
     state.element.innerHTML = '';
     if (this.cursorManager) {
-      this.cursorManager.remove();
+      this.cursorManager.reset(state.element, this.options.cursor);
+    } else {
+      this.cursorManager = new CursorManager(
+        state.element,
+        this.options.cursor,
+        this.logger,
+        this.errorHandler
+      );
     }
-    this.cursorManager = new CursorManager(
-      state.element,
-      this.options.cursor,
-      this.logger,
-      this.errorHandler
-    );
-    this.cursorManager.updateCursorPosition(state.element);
     this.logger.debug('State reset');
   }
 
@@ -170,6 +173,7 @@ export class TypecraftEngine implements ITypecraftEngine {
       typeHtmlContent: this.typeHtmlContent.bind(this),
       typeHtmlTagClose: this.typeHtmlTagClose.bind(this),
       deleteChars: this.deleteChars.bind(this),
+      deleteHtmlNode: this.deleteHtmlNode.bind(this),
       wait: this.wait.bind(this),
       typeString: this.typeString.bind(this),
       emit: (eventName: TypecraftEvent, payload?: any) => this.emit(eventName, payload),
@@ -341,6 +345,29 @@ export class TypecraftEngine implements ITypecraftEngine {
     }
   }
 
+  public async deleteHtmlNode(payload: { index: number }): Promise<void> {
+    const state = this.stateManager.getState();
+    const { index } = payload;
+
+    if (index >= 0 && index < state.visibleNodes.length) {
+      const node = state.visibleNodes[index];
+      if (node.type === NodeType.HTMLElement) {
+        // Remove the node from DOM
+        node.node.parentNode?.removeChild(node.node);
+
+        // Remove the node and its children from state
+        this.stateManager.removeNodeAtIndex(index);
+
+        // Update cursor position
+        this.cursorManager.updateCursorPosition(state.element);
+
+        const { delete: deleteSpeed } = this.speedManager.getSpeed();
+        await this.wait(deleteSpeed);
+        this.emit('deleteComplete');
+      }
+    }
+  }
+
   private async applyTextEffect(effect: TextEffect): Promise<void> {
     if (effect === TextEffect.None) {
       return;
@@ -397,10 +424,15 @@ export class TypecraftEngine implements ITypecraftEngine {
   }
 
   public start(): Promise<void> {
+    if (this.isStarted) {
+      return Promise.resolve();
+    }
+
+    this.isStarted = true;
     try {
       this.resetState();
-      this.cursorManager.updateCursorStyle();
       const state = this.stateManager.getState();
+      this.cursorManager.setupCursor(state.element);
       if (this.options.strings.length && !state.queue.length) {
         this.typeAllStrings();
       }
@@ -420,11 +452,16 @@ export class TypecraftEngine implements ITypecraftEngine {
   }
 
   public stop(): void {
+    if (!this.isStarted) {
+      return;
+    }
+
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
     this.queueManager.clear();
+    this.isStarted = false;
     this.logger.info('TypecraftEngine stopped');
   }
 
@@ -443,52 +480,51 @@ export class TypecraftEngine implements ITypecraftEngine {
     return this;
   }
 
-  public typeAllStrings(): this {
-    this.queueManager.clear();
-    const fixedStringsIndexes = this.options.fixedStringsIndexes || [];
-    const allStrings = this.options.strings;
+  public setLoopLastString(value: boolean): this {
+    this.options.loopLastString = value;
+    return this;
+  }
 
-    let currentIndex = 0;
-    while (currentIndex < allStrings.length) {
-      if (fixedStringsIndexes.includes(currentIndex)) {
-        // Type fixed string
-        this.stringManager.typeString(allStrings[currentIndex], this.options.html);
-        this.pauseFor(this.options.pauseFor);
-        currentIndex++;
-      } else {
-        // Find the next fixed string or the end of the array
-        const nextFixedIndex =
-          fixedStringsIndexes.find((index) => index > currentIndex) || allStrings.length;
+  public typeAllStrings(): void {
+    const { strings, loop, pauseFor } = this.options;
+    const loopLastString = this.options.loopLastString ?? false;
 
-        // Type and loop through non-fixed strings until the next fixed string
-        for (let i = currentIndex; i < nextFixedIndex; i++) {
-          this.stringManager.typeString(allStrings[i], this.options.html);
-          this.pauseFor(this.options.pauseFor);
+    if (loopLastString) {
+      // Type all strings sequentially first
+      strings.forEach((str) => {
+        this.typeString(str);
+        this.queueManager.addPause(pauseFor);
+      });
 
-          if (i < nextFixedIndex - 1 || (i === allStrings.length - 1 && this.options.loop)) {
-            this.stringManager.deleteAll(allStrings[i].length);
-          }
+      // Add the loop action with delete and pause
+      this.queueManager.add({
+        type: QueueActionType.LOOP_LAST_STRING,
+        payload: {
+          stringIndex: strings.length - 1,
+        },
+      });
+    } else if (loop) {
+      strings.forEach((str, index) => {
+        this.typeString(str);
+        if (index < strings.length - 1) {
+          this.queueManager.addPause(pauseFor);
+          this.deleteChars(str.length);
         }
+      });
 
-        if (this.options.loop && nextFixedIndex < allStrings.length) {
-          this.queueManager.add({
-            type: QueueActionType.LOOP,
-            payload: { startIndex: currentIndex, endIndex: nextFixedIndex - 1 },
-          });
-        }
-
-        currentIndex = nextFixedIndex;
-      }
-    }
-
-    if (this.options.loop) {
       this.queueManager.add({
         type: QueueActionType.LOOP,
-        payload: { startIndex: 0, endIndex: allStrings.length - 1 },
+        payload: { startIndex: 0, endIndex: strings.length - 1 },
+      });
+    } else {
+      // Non-loop logic
+      strings.forEach((str, index) => {
+        this.typeString(str);
+        if (index < strings.length - 1) {
+          this.queueManager.addPause(pauseFor);
+        }
       });
     }
-
-    return this;
   }
 
   public registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this {
@@ -496,8 +532,8 @@ export class TypecraftEngine implements ITypecraftEngine {
     return this;
   }
 
-  public typeString(string: string): this {
-    this.stringManager.typeString(string, this.options.html);
+  public typeString(str: string): this {
+    this.stringManager.typeString(str, this.options.html);
     return this;
   }
 

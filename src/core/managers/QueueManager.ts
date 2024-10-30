@@ -1,4 +1,4 @@
-import { QueueItem, QueueActionType, TypecraftContext } from '../../types';
+import { QueueItem, QueueActionType, TypecraftContext, NodeType } from '../../types';
 import { ErrorHandler } from '../../utils/ErrorHandler';
 import { ErrorSeverity } from '../error/TypecraftError';
 import { ITypecraftLogger } from '../logging/TypecraftLogger';
@@ -138,6 +138,9 @@ export class QueueManager implements IQueueManager {
           context.emit('deleteSkipped');
         }
         break;
+      case QueueActionType.DELETE_HTML_NODE:
+        await context.deleteHtmlNode(item.payload);
+        break;
       case QueueActionType.PAUSE:
         await context.wait(item.payload.ms);
         break;
@@ -148,25 +151,159 @@ export class QueueManager implements IQueueManager {
         }
         break;
       case QueueActionType.LOOP:
-        const { startIndex, endIndex } = item.payload;
-        const { strings, fixedStringsIndexes, pauseFor, loop } = context.options;
+        if (context.options.loop) {
+          const { startIndex, endIndex } = item.payload;
+          const { strings, pauseFor } = context.options;
 
-        for (let i = startIndex; i <= endIndex; i++) {
-          if (!fixedStringsIndexes?.includes(i)) {
+          for (let i = startIndex; i <= endIndex; i++) {
             await context.typeString(strings[i]);
             await context.wait(pauseFor);
-            if (i < endIndex || loop) {
-              await context.deleteChars(strings[i].length);
-            }
+          }
+
+          if (context.options.loop) {
+            this.add(item);
           }
         }
+        break;
+      case QueueActionType.LOOP_LAST_STRING:
+        if (context.options.loopLastString) {
+          const { stringIndex } = item.payload;
+          const lastString = context.options.strings[stringIndex];
 
-        if (loop) {
-          this.add(item);
+          try {
+            const currentContent = context.getState().visibleNodes;
+
+            // Process deletion in reverse order with proper HTML handling
+            for (let i = currentContent.length - 1; i >= 0; i--) {
+              const node = currentContent[i];
+
+              if (node.type === NodeType.HTMLElement) {
+                // Get all child nodes recursively
+                const childNodes = this.getAllChildNodes(node.node as HTMLElement);
+
+                // Delete children first
+                for (const childNode of childNodes.reverse()) {
+                  this.add({
+                    type: QueueActionType.DELETE_HTML_NODE,
+                    payload: {
+                      index: currentContent.findIndex((n) => n.node === childNode),
+                    },
+                  });
+                }
+
+                // Then delete the parent node
+                this.add({
+                  type: QueueActionType.DELETE_HTML_NODE,
+                  payload: { index: i },
+                });
+              } else if (node.type === NodeType.Character) {
+                this.add({
+                  type: QueueActionType.DELETE_CHARACTERS,
+                  payload: { count: 1 },
+                });
+              }
+            }
+
+            // Add pause and continue with the rest of the logic
+            this.add({
+              type: QueueActionType.PAUSE,
+              payload: { ms: context.options.pauseFor },
+            });
+
+            // Process new content
+            if (context.options.html) {
+              // Parse HTML content
+              const template = document.createElement('template');
+              template.innerHTML = lastString;
+              const nodes = Array.from(template.content.childNodes);
+
+              // Process each node
+              nodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                  this.processHtmlNode(node as Element);
+                } else if (node.nodeType === Node.TEXT_NODE) {
+                  const text = node.textContent || '';
+                  for (const char of text) {
+                    this.add({
+                      type: QueueActionType.TYPE_CHARACTER,
+                      payload: { char },
+                    });
+                  }
+                }
+              });
+            } else {
+              // Process plain text
+              for (const char of lastString) {
+                this.add({
+                  type: QueueActionType.TYPE_CHARACTER,
+                  payload: { char },
+                });
+              }
+            }
+
+            // Continue loop if enabled
+            if (context.options.loopLastString) {
+              this.add(item);
+            }
+          } catch (error) {
+            this.errorHandler.handleError(
+              error,
+              'Error in LOOP_LAST_STRING',
+              { lastString },
+              ErrorSeverity.HIGH
+            );
+          }
         }
         break;
       default:
         this.logger.warn('Unknown queue action type', { type: item.type });
     }
+  }
+
+  private processHtmlNode(element: Element): void {
+    // Add opening tag
+    this.add({
+      type: QueueActionType.TYPE_HTML_TAG_OPEN,
+      payload: { tagName: element.tagName, attributes: element.attributes },
+    });
+
+    // Process child nodes
+    Array.from(element.childNodes).forEach((childNode) => {
+      if (childNode.nodeType === Node.TEXT_NODE) {
+        const text = childNode.textContent || '';
+        for (const char of text) {
+          this.add({
+            type: QueueActionType.TYPE_CHARACTER,
+            payload: { char },
+          });
+        }
+      } else if (childNode.nodeType === Node.ELEMENT_NODE) {
+        this.processHtmlNode(childNode as Element);
+      }
+    });
+
+    // Add closing tag
+    this.add({
+      type: QueueActionType.TYPE_HTML_TAG_CLOSE,
+      payload: { tagName: element.tagName },
+    });
+  }
+
+  private getAllChildNodes(element: HTMLElement): Node[] {
+    const nodes: Node[] = [];
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+      null
+    );
+
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node !== element) {
+        nodes.push(node);
+      }
+    }
+
+    return nodes;
   }
 }

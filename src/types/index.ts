@@ -52,7 +52,7 @@ export type EasingFunction = (t: number) => number;
 
 export interface TypecraftOptions {
   strings: string[];
-  fixedStringsIndexes?: number[];
+  loopLastString: boolean;
   speed: SpeedOptions;
   loop: boolean;
   autoStart: boolean;
@@ -91,6 +91,7 @@ export enum QueueActionType {
   CHANGE_CURSOR_STYLE = 'changeCursorStyle',
   CHANGE_TEXT_EFFECT = 'setTextEffect',
   DELETE_CHARACTERS = 'deleteChars',
+  DELETE_HTML_NODE = 'deleteHtmlNode',
   CALL_FUNCTION = 'callFunction',
   TYPE_CHARACTER = 'typeCharacter',
   TYPE_HTML_TAG_OPEN = 'typeHtmlTagOpen',
@@ -98,6 +99,7 @@ export enum QueueActionType {
   TYPE_HTML_CONTENT = 'typeHtmlContent',
   WORD_REPLACE_START = 'wordReplaceStart',
   WORD_REPLACE_END = 'wordReplaceEnd',
+  LOOP_LAST_STRING = 'loopLastString',
 }
 
 export interface QueueItem {
@@ -173,6 +175,7 @@ export interface TypecraftContext {
   typeHtmlContent: (content: string) => Promise<void>;
   typeHtmlTagClose: (payload: any) => Promise<void>;
   deleteChars: (count: number) => Promise<void>;
+  deleteHtmlNode: (payload: { index: number }) => Promise<void>;
   wait: (ms: number) => Promise<void>;
   typeString: (string: string) => void;
   emit: (eventName: TypecraftEvent, payload?: any) => void;

@@ -21,6 +21,7 @@ export interface IStateManager {
   updateCursorBlinkState(state: boolean): void;
   updateLastCursorBlinkTime(time: number): void;
   setCursorNode(node: HTMLElement | null): void;
+  removeNodeAtIndex(index: number): void;
 }
 
 export class StateManager implements IStateManager {
@@ -209,5 +210,48 @@ export class StateManager implements IStateManager {
     }
     this.state.cursorNode = node;
     this.logger.debug('Cursor node set', { node });
+  }
+
+  public removeNodeAtIndex(index: number): void {
+    try {
+      if (index < 0 || index >= this.state.visibleNodes.length) {
+        this.errorHandler.handleError(
+          new Error('Invalid index'),
+          'Index out of bounds in removeNodeAtIndex',
+          { index, totalNodes: this.state.visibleNodes.length },
+          ErrorSeverity.HIGH
+        );
+        return;
+      }
+
+      const nodeToRemove = this.state.visibleNodes[index];
+
+      if (nodeToRemove.type === NodeType.HTMLElement) {
+        // For HTML elements, remove all child nodes from state
+        const element = nodeToRemove.node as HTMLElement;
+        const childNodes = Array.from(element.querySelectorAll('*'));
+
+        this.state.visibleNodes = this.state.visibleNodes.filter((visibleNode) => {
+          const node = visibleNode.node;
+          return !childNodes.includes(node as HTMLElement) && node !== element;
+        });
+      } else {
+        // For non-HTML elements, simply remove the node at the index
+        this.state.visibleNodes.splice(index, 1);
+      }
+
+      this.logger.debug('Node removed at index', {
+        index,
+        nodeType: nodeToRemove.type,
+        remainingNodes: this.state.visibleNodes.length,
+      });
+    } catch (error) {
+      this.errorHandler.handleError(
+        error,
+        'Error removing node at index',
+        { index },
+        ErrorSeverity.HIGH
+      );
+    }
   }
 }

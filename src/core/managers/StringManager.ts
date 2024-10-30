@@ -25,10 +25,7 @@ export class StringManager implements IStringManager {
       this.errorHandler.handleError(
         new Error('Invalid input'),
         'Invalid input for typeString',
-        {
-          string,
-          htmlEnabled,
-        },
+        { string, htmlEnabled },
         ErrorSeverity.HIGH
       );
     }
@@ -39,6 +36,7 @@ export class StringManager implements IStringManager {
     } else {
       this.typeCharacters(string);
     }
+
     this.logger.debug('String queued for typing', {
       stringLength: string.length,
       htmlEnabled,
@@ -129,13 +127,35 @@ export class StringManager implements IStringManager {
           type: QueueActionType.TYPE_HTML_TAG_OPEN,
           payload: { tagName: element.tagName, attributes: element.attributes },
         });
-        this.typeNodes(Array.from(element.childNodes));
+
+        // Process child nodes
+        if (element.childNodes.length > 0) {
+          Array.from(element.childNodes).forEach((childNode) => {
+            if (childNode.nodeType === Node.TEXT_NODE) {
+              // Use TYPE_HTML_CONTENT for text inside HTML elements
+              this.queueManager.add({
+                type: QueueActionType.TYPE_HTML_CONTENT,
+                payload: { content: childNode.textContent || '' },
+              });
+            } else if (childNode.nodeType === Node.ELEMENT_NODE) {
+              this.typeNodes([childNode]);
+            }
+          });
+        }
+
         this.queueManager.add({
           type: QueueActionType.TYPE_HTML_TAG_CLOSE,
           payload: { tagName: element.tagName },
         });
       } else if (node.nodeType === Node.TEXT_NODE) {
-        this.typeCharacters(node.textContent || '');
+        // Use TYPE_CHARACTER for root-level text nodes
+        const text = node.textContent || '';
+        for (const char of text) {
+          this.queueManager.add({
+            type: QueueActionType.TYPE_CHARACTER,
+            payload: { char },
+          });
+        }
       }
     });
   }

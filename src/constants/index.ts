@@ -27,6 +27,7 @@ export const DEFAULT_HTML_PARSER_OPTIONS = {
 
 export const DEFAULT_OPTIONS: TypecraftOptions = {
   strings: [],
+  loopLastString: false,
   speed: {
     type: DEFAULT_TYPE_SPEED,
     delete: DEFAULT_DELETE_SPEED,

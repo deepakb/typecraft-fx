@@ -68,6 +68,7 @@ export class OptionsManager implements IOptionsManager {
           ...DEFAULT_OPTIONS.cursor,
           ...options.cursor,
         },
+        loopLastString: options.loopLastString ?? DEFAULT_OPTIONS.loopLastString,
       };
 
       return TypecraftOptionsSchema.parse(mergedOptions);

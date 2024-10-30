@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  TypecraftFX as TypecraftFXImport,
-  Direction,
-  CursorStyle,
-  TextEffect,
-  TypecraftEngine,
-} from '../src';
+import { TypecraftFX as TypecraftFXImport, Direction, TextEffectß, TextEffect } from '../src';
 import { Meta, StoryObj } from '@storybook/react';
 
 const TypecraftFX = React.lazy(TypecraftFXImport);
@@ -28,6 +22,10 @@ const meta: Meta<typeof TypecraftFXWrapper> = {
       description: 'Typing speed configuration',
     },
     loop: { control: 'boolean' },
+    loopLastString: {
+      control: 'boolean',
+      description: 'Loop only the last string continuously',
+    },
     autoStart: { control: 'boolean' },
     pauseFor: { control: 'number' },
     direction: { control: { type: 'select', options: Object.values(Direction) } },
@@ -45,31 +43,59 @@ type Story = StoryObj<typeof TypecraftFXWrapper>;
 
 export const Default: Story = {
   args: {
-    strings: ['Welcome to TypecraftFX', 'A powerful typing animation library'],
+    strings: ['Welcome to TypecraftFX. ', 'A powerful typing animation library'],
     speed: { type: 50, delete: 50, delay: 1000 },
     loop: false,
-    autoStart: true,
+    pauseFor: 1000,
   },
 };
 
-export const LoopingTextWithPauseAndDelete: Story = {
+export const LoopingTextWithPause: Story = {
   args: {
     ...Default.args,
     strings: ['Hello, world!', 'This is a looping text', 'Goodbye, world!'],
+    speed: { type: 50, delete: 50, delay: 1000 },
     loop: true,
     pauseFor: 1000,
   },
 };
 
-export const LoopingTextWithFixed: Story = {
+export const LoopLastString: Story = {
   args: {
-    ...Default.args,
-    strings: ['Hello, ', 'World!', 'Universe!', 'Galaxy!'],
-    fixedStringsIndexes: [0],
-    loop: true,
-    pauseFor: 1000,
+    strings: [
+      'Welcome to Enterprise Portal',
+      'Loading your personalized dashboard...',
+      '<b>Click here to get started →</b>',
+    ],
+    loopLastString: true,
+    speed: { type: 50, delete: 50, delay: 1000 },
+    pauseFor: 2000,
+    html: true,
   },
 };
+
+export const SimpleHTMLTest: Story = {
+  args: {
+    strings: [
+      'Starting...',
+      '<span style="color: red;">Error!</span>',
+      '<div style="color: green;">Success</div>',
+    ],
+    speed: { type: 50, delete: 50, delay: 1000 },
+    pauseFor: 2000,
+    html: true,
+  },
+};
+
+// export const LoopingTextWithFixed: Story = {
+//   args: {
+//     ...Default.args,
+//     strings: ['Hello, ', 'World!', 'Universe!', 'Galaxy!'],
+//     fixedStringsIndexes: [0],
+//     loop: true,
+//     pauseFor: 1000,
+//   },
+// };
 
 // export const DeleteCharsTest: Story = {
 //   args: {

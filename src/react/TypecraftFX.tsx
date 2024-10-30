@@ -78,6 +78,7 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
     loop = false, // Default loop
     pauseFor = 1500, // Default pauseFor
     html = false, // Default html
+    loopLastString = false, // Default loopLastString
     cursor = {
       style: CursorStyle.Solid,
       color: '#333',
@@ -104,6 +105,7 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
 
   const elementRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<TypecraftEngine | null>(null);
+  const isMounted = useRef(false);
 
   // Expose the Typecraft engine via ref
   useImperativeHandle(ref, () => ({ typecraft: engineRef.current }));
@@ -120,14 +122,27 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
       pauseFor,
       html,
       cursor,
+      loopLastString,
       ...propsOptions,
     }),
-    [autoStart, speed, textEffect, direction, loop, pauseFor, html, cursor, propsOptions]
+    [
+      autoStart,
+      speed,
+      textEffect,
+      direction,
+      loop,
+      pauseFor,
+      html,
+      cursor,
+      propsOptions,
+      loopLastString,
+    ]
   );
 
   // Initialize engine on mount
   useEffect(() => {
-    if (elementRef.current) {
+    if (!isMounted.current && elementRef.current) {
+      isMounted.current = true;
       engineRef.current = initializeEngine(elementRef.current, options, logger, onInit);
       if (autoStart) {
         engineRef.current?.start();
@@ -135,6 +150,7 @@ export const TypecraftFX = forwardRef<TypecraftFXRef, TypecraftFXProps>((props, 
     }
     return () => {
       engineRef.current?.stop();
+      isMounted.current = false;
     };
   }, [options, onInit, autoStart, logger]);
 
