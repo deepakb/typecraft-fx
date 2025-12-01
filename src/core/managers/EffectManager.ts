@@ -19,7 +19,7 @@ export interface IEffectManager {
     effect: (node: HTMLElement, progress: number) => void
   ): void;
   stopContinuousEffect(node: HTMLElement): void;
-  resetEffectStyles(nodes: HTMLElement[], effect: TextEffect): void;
+  resetEffectStyles(nodes: HTMLElement[], effect: TextEffect | string): void;
 }
 
 export class EffectManager implements IEffectManager {
@@ -103,9 +103,11 @@ export class EffectManager implements IEffectManager {
     }
   }
 
-  public resetEffectStyles(nodes: HTMLElement[], effect: TextEffect): void {
+  public resetEffectStyles(nodes: HTMLElement[], effect: TextEffect | string): void {
     this.validateNodesArray(nodes);
-    this.validateTextEffect(effect);
+    if (typeof effect !== 'string') {
+      this.validateTextEffect(effect);
+    }
 
     nodes.forEach((node) => {
       node.style.transition = '';

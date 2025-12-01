@@ -1,13 +1,24 @@
 import { QueueManager } from '../../src/core/managers/QueueManager';
 import { QueueItem, QueueActionType } from '../../src/types';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('QueueManager', () => {
   let queueManager: QueueManager;
   let sampleQueueItem: QueueItem;
+  let mockLogger: any;
+  let mockErrorHandler: any;
 
   beforeEach(() => {
-    queueManager = new QueueManager();
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    mockErrorHandler = {
+      handleError: vi.fn(),
+    };
+    queueManager = new QueueManager(mockLogger, mockErrorHandler);
     sampleQueueItem = { type: QueueActionType.TYPE_CHARACTER, payload: { char: 'a' } };
   });
 

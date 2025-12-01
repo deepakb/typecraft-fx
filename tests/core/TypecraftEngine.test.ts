@@ -16,16 +16,38 @@ vi.mock('../../src/core/EffectsManager');
 vi.mock('../../src/core/StringManager');
 vi.mock('../../src/core/SpeedManager');
 vi.mock('../../src/core/EasingManager');
+vi.mock('../../src/core/logging/TypecraftLogger');
+vi.mock('../../src/utils/ErrorHandler');
+vi.mock('../../src/core/factories/ManagerFactory');
+
+import { ITypecraftLogger } from '../../src/core/logging/TypecraftLogger';
+import { ErrorHandler } from '../../src/utils/ErrorHandler';
+import { IManagerFactory } from '../../src/core/factories/ManagerFactory';
 
 describe('TypecraftEngine', () => {
   let engine: TypecraftEngine;
   let element: HTMLElement;
+  let logger: ITypecraftLogger;
+  let errorHandler: ErrorHandler;
+  let managerFactory: IManagerFactory;
   let options: Partial<TypecraftOptions>;
 
   beforeEach(() => {
     element = document.createElement('div');
+    logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as ITypecraftLogger;
+    errorHandler = {
+      handleError: vi.fn(),
+    } as unknown as ErrorHandler;
+
     options = {
       strings: ['Hello, World!'],
+      speed: { type: 50, delete: 50, delay: 0 },
+      textEffect: TextEffect.None,
       cursor: {
         text: '|',
         color: 'black',
@@ -35,6 +57,57 @@ describe('TypecraftEngine', () => {
         blink: true,
       },
     };
+
+    managerFactory = {
+      createOptionsManager: vi.fn().mockReturnValue({
+        getOptions: () => options,
+        updateOptions: vi.fn((newOptions) => {
+          options = { ...options, ...newOptions };
+        }),
+      }),
+      createStateManager: vi.fn().mockImplementation((el) => ({
+        getState: () => ({ element: el, queue: [], visibleNodes: [] }),
+        getEventListeners: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        updateVisibleNodes: vi.fn(),
+        clearVisibleNodes: vi.fn(),
+        removeLastVisibleNode: vi.fn(),
+      })),
+      createQueueManager: vi.fn().mockReturnValue({
+        add: vi.fn(),
+        clear: vi.fn(),
+        processQueue: vi.fn(),
+        addPause: vi.fn(),
+        addFunction: vi.fn(),
+        getNext: vi.fn(),
+      }),
+      createEasingManager: vi.fn().mockReturnValue({ setEasingFunction: vi.fn() }),
+      createEffectManager: vi.fn().mockReturnValue({
+        applyTextEffect: vi.fn(),
+        resetEffectStyles: vi.fn(),
+        registerCustomEffect: vi.fn(),
+      }),
+      createStringManager: vi.fn().mockReturnValue({
+        typeString: vi.fn(),
+        deleteAll: vi.fn(),
+        typeWord: vi.fn(),
+      }),
+      createSpeedManager: vi.fn().mockReturnValue({
+        setSpeed: vi.fn(),
+        getSpeed: vi.fn().mockReturnValue({ type: 50, delete: 50, delay: 0 }),
+      }),
+      createCursorManager: vi.fn().mockReturnValue({
+        setupCursor: vi.fn(),
+        updateCursorPosition: vi.fn(),
+        updateBlink: vi.fn(),
+        remove: vi.fn(),
+        updateCursorStyle: vi.fn(),
+        changeCursor: vi.fn(),
+        getCursorElement: vi.fn(),
+      }),
+    } as unknown as IManagerFactory;
+
     document.body.appendChild(element);
     vi.useFakeTimers();
   });
@@ -47,11 +120,11 @@ describe('TypecraftEngine', () => {
 
   describe('Constructor and Initialization', () => {
     it('should initialize with default options', () => {
-      const element = document.createElement('div');
-      const engine = new TypecraftEngine(element);
+      const localElement = document.createElement('div');
+      const engine = new TypecraftEngine(localElement, {}, logger, errorHandler, managerFactory);
 
       expect(engine).toBeDefined();
-      expect(engine.getElement()).toBe(element);
+      expect(engine.getElement()).toBe(localElement);
     });
 
     it('should initialize with custom options', () => {
@@ -68,13 +141,13 @@ describe('TypecraftEngine', () => {
           blink: true,
         },
       };
-      engine = new TypecraftEngine(element, options);
+      engine = new TypecraftEngine(element, options, logger, errorHandler, managerFactory);
       expect(engine).toBeDefined();
     });
 
     it('should call init method', () => {
       const initSpy = vi.spyOn(TypecraftEngine.prototype as any, 'init');
-      engine = new TypecraftEngine(element, options);
+      engine = new TypecraftEngine(element, options, logger, errorHandler, managerFactory);
       expect(initSpy).toHaveBeenCalled();
     });
   });
@@ -82,7 +155,7 @@ describe('TypecraftEngine', () => {
   describe('Public Methods', () => {
     beforeEach(() => {
       element = document.createElement('div');
-      engine = new TypecraftEngine(element);
+      engine = new TypecraftEngine(element, {}, logger, errorHandler, managerFactory);
     });
 
     it('should set easing function', () => {
@@ -106,8 +179,9 @@ describe('TypecraftEngine', () => {
     });
 
     it('should change cursor', () => {
+      const changeCursorSpy = vi.spyOn(engine['cursorManager'], 'changeCursor');
       engine.changeCursor({ text: '_' });
-      expect(engine['options'].cursor.text).toBe('_');
+      expect(changeCursorSpy).toHaveBeenCalledWith({ text: '_' });
     });
 
     it('should set type speed', () => {
@@ -129,12 +203,9 @@ describe('TypecraftEngine', () => {
     });
 
     it('should pause for specified time', () => {
-      const addToQueueSpy = vi.spyOn(engine['queueManager'], 'add');
+      const addPauseSpy = vi.spyOn(engine['queueManager'], 'addPause');
       engine.pauseFor(1000);
-      expect(addToQueueSpy).toHaveBeenCalledWith({
-        type: QueueActionType.PAUSE,
-        payload: { ms: 1000 },
-      });
+      expect(addPauseSpy).toHaveBeenCalledWith(1000);
     });
 
     it('should set text effect', () => {
@@ -173,16 +244,23 @@ describe('TypecraftEngine', () => {
 
     it('should call function', () => {
       const callback = vi.fn();
-      const addToQueueSpy = vi.spyOn(engine['queueManager'], 'add');
+      const addFunctionSpy = vi.spyOn(engine['queueManager'], 'addFunction');
       engine.callFunction(callback);
-      expect(addToQueueSpy).toHaveBeenCalledWith({
-        type: QueueActionType.CALL_FUNCTION,
-        payload: { callback },
-      });
+      expect(addFunctionSpy).toHaveBeenCalledWith(callback);
     });
 
     it('should type out all strings', () => {
-      engine['options'].strings = ['Hello', 'World'];
+      // Mock options to include strings
+      const optionsManager = engine['optionsManager'];
+      vi.spyOn(optionsManager, 'getOptions').mockReturnValue({
+        ...options,
+        strings: ['Hello', 'World'],
+        fixedStringsIndexes: [],
+        loop: false,
+        pauseFor: 1000,
+        html: false,
+      } as any);
+
       const typeStringSpy = vi.spyOn(engine['stringManager'], 'typeString');
       const deleteAllSpy = vi.spyOn(engine['stringManager'], 'deleteAll');
       engine.typeAllStrings();
@@ -192,7 +270,7 @@ describe('TypecraftEngine', () => {
 
     it('should register custom effect', () => {
       const customEffect = vi.fn();
-      const registerCustomEffectSpy = vi.spyOn(engine['EffectManager'], 'registerCustomEffect');
+      const registerCustomEffectSpy = vi.spyOn(engine['effectManager'], 'registerCustomEffect');
       engine.registerCustomEffect('customEffect', customEffect);
       expect(registerCustomEffectSpy).toHaveBeenCalledWith('customEffect', customEffect);
     });
@@ -210,7 +288,7 @@ describe('TypecraftEngine', () => {
   describe('Private Methods', () => {
     beforeEach(() => {
       element = document.createElement('div');
-      engine = new TypecraftEngine(element);
+      engine = new TypecraftEngine(element, {}, logger, errorHandler, managerFactory);
     });
 
     it('should emit events', () => {
@@ -224,13 +302,9 @@ describe('TypecraftEngine', () => {
     });
 
     it('should run queue', async () => {
-      const queueItem = { type: QueueActionType.TYPE_CHARACTER, payload: { char: 'a' } };
-      vi.spyOn(engine['queueManager'], 'getNext').mockReturnValueOnce(queueItem);
-      const typeCharacterSpy = vi
-        .spyOn(engine as any, 'typeCharacter')
-        .mockResolvedValue(undefined);
+      const processQueueSpy = vi.spyOn(engine['queueManager'], 'processQueue').mockResolvedValue(undefined);
       await (engine as any).runQueue();
-      expect(typeCharacterSpy).toHaveBeenCalledWith({ char: 'a' });
+      expect(processQueueSpy).toHaveBeenCalled();
     });
 
     it('should check operation complete', () => {
@@ -247,20 +321,22 @@ describe('TypecraftEngine', () => {
 
     it('should type character', async () => {
       const testElement = document.createElement('div');
-      document.body.appendChild(testElement);
+      const state = {
+        element: testElement,
+        visibleNodes: [] as any[],
+        queue: [],
+      };
 
-      const engine = new TypecraftEngine(testElement, {
-        strings: ['Test'],
-        speed: { type: 50, delete: 50, delay: 0 },
-        loop: false,
-        autoStart: false,
-        textEffect: TextEffect.None, // Disable text effects for this test
+      // Mock stateManager to return our test state
+      vi.spyOn(engine['stateManager'], 'getState').mockReturnValue(state as any);
+      vi.spyOn(engine['stateManager'], 'updateVisibleNodes').mockImplementation((node) => {
+        state.visibleNodes.push(node as any);
       });
 
       // Mock methods to avoid side effects
-      vi.spyOn(engine['cursorManager'], 'updateCursorPosition').mockImplementation(() => {});
+      vi.spyOn(engine['cursorManager'], 'updateCursorPosition').mockImplementation(() => { });
       vi.spyOn(engine as any, 'applyTextEffect').mockResolvedValue(undefined);
-      vi.spyOn(engine as any, 'emit').mockImplementation(() => {});
+      vi.spyOn(engine as any, 'emit').mockImplementation(() => { });
 
       // Use fake timers
       vi.useFakeTimers();
@@ -274,16 +350,34 @@ describe('TypecraftEngine', () => {
 
       expect(testElement.textContent).toBe('A');
 
-      // Clean up
-      document.body.removeChild(testElement);
       vi.useRealTimers();
     });
 
     it('should delete character', async () => {
-      const engine = new TypecraftEngine(element, {});
-      element.textContent = 'Test'; // Add this line to ensure there's content to delete
-      await engine['deleteChars'](1);
-      expect(element.textContent).toBe('Tes');
+      const testElement = document.createElement('div');
+      testElement.textContent = 'Test';
+      const span = document.createElement('span');
+      span.textContent = 'Test';
+      testElement.appendChild(span);
+
+      const state = {
+        element: testElement,
+        visibleNodes: [{ type: 'character', node: span }],
+        queue: [],
+      };
+
+      vi.spyOn(engine['stateManager'], 'getState').mockReturnValue(state as any);
+      vi.spyOn(engine['stateManager'], 'removeLastVisibleNode').mockImplementation(() => {
+        state.visibleNodes.pop();
+      });
+
+      vi.useFakeTimers();
+      const deletePromise = (engine as any).executeDeleteChars(1);
+      vi.advanceTimersByTime(50);
+      await deletePromise;
+
+      expect(span.textContent).toBe('Tes');
+      vi.useRealTimers();
     });
 
     // it('should apply text effect', async () => {

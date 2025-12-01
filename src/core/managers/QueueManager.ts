@@ -20,7 +20,7 @@ export class QueueManager implements IQueueManager {
   constructor(
     private logger: ITypecraftLogger,
     private errorHandler: ErrorHandler
-  ) {}
+  ) { }
 
   public add(item: QueueItem): void {
     if (!item || typeof item !== 'object') {
@@ -136,6 +136,12 @@ export class QueueManager implements IQueueManager {
         } else {
           this.logger.warn('Delete skipped: No visible nodes');
           context.emit('deleteSkipped');
+        }
+        break;
+      case QueueActionType.DELETE_ALL:
+        const currentNodes = context.getState().visibleNodes;
+        if (currentNodes.length > 0) {
+          await context.deleteChars(currentNodes.length);
         }
         break;
       case QueueActionType.PAUSE:

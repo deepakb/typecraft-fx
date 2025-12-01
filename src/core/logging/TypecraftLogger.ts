@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import { TypecraftError, ErrorCode, ErrorSeverity } from '../error/TypecraftError';
-import { ErrorHandler } from '../../utils/ErrorHandler';
+
 
 export enum LogLevel {
   ERROR = 'ERROR',
@@ -31,7 +31,7 @@ export class TypecraftLogger implements ITypecraftLogger {
   private logEntries: ILogEntry[] = [];
   private logLevel: LogLevel = LogLevel.INFO;
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): TypecraftLogger {
     if (!TypecraftLogger.instance) {
@@ -117,7 +117,12 @@ export class TypecraftLogger implements ITypecraftLogger {
     context: object = {},
     severity: ErrorSeverity = ErrorSeverity.HIGH
   ): never {
-    ErrorHandler.handleError(error, message, context, severity);
+    const typecraftError = new TypecraftError(ErrorCode.RUNTIME_ERROR, message, severity, {
+      originalError: error,
+      ...context,
+    });
+    this.log(LogLevel.ERROR, typecraftError.toString(), context);
+    throw typecraftError;
   }
 }
 

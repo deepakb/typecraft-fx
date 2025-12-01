@@ -59,7 +59,7 @@ export interface TypecraftOptions {
   cursor: CursorOptions;
   pauseFor: number;
   direction: Direction;
-  textEffect: TextEffect;
+  textEffect: TextEffect | string;
   easingFunction: EasingFunction;
   html: boolean;
 }
@@ -98,6 +98,7 @@ export enum QueueActionType {
   TYPE_HTML_CONTENT = 'typeHtmlContent',
   WORD_REPLACE_START = 'wordReplaceStart',
   WORD_REPLACE_END = 'wordReplaceEnd',
+  DELETE_ALL = 'deleteAll',
 }
 
 export interface QueueItem {

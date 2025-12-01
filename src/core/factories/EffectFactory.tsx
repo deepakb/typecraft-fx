@@ -2,14 +2,14 @@ import { EasingManager } from '../managers/EasingManager';
 import { ErrorCode, TypecraftError, ErrorSeverity } from '../error/TypecraftError';
 import { CustomEffectFunction, TextEffect } from '../../types';
 import { logger } from '../logging/TypecraftLogger';
-import { ErrorHandler } from '../../utils/ErrorHandler';
+
 
 export interface IBaseEffect {
   apply(node: HTMLElement, index: number, speed: number): Promise<void>;
 }
 
 export abstract class BaseEffect implements IBaseEffect {
-  constructor(protected easingManager: EasingManager) {}
+  constructor(protected easingManager: EasingManager) { }
   abstract apply(node: HTMLElement, index: number, speed: number): Promise<void>;
 }
 
@@ -81,12 +81,17 @@ export class EffectFactory implements IEffectFactory {
     context: object = {},
     severity: ErrorSeverity = ErrorSeverity.HIGH
   ): never {
-    ErrorHandler.handleError(error, message, context, severity);
+    const typecraftError = new TypecraftError(ErrorCode.RUNTIME_ERROR, message, severity, {
+      originalError: error,
+      ...context,
+    });
+    logger.error(ErrorCode.RUNTIME_ERROR, message, { error: typecraftError, ...context });
+    throw typecraftError;
   }
 }
 
 class FadeInEffect extends BaseEffect {
-  async apply(node: HTMLElement, index: number, speed: number): Promise<void> {
+  async apply(node: HTMLElement, _index: number, _speed: number): Promise<void> {
     return new Promise((resolve) => {
       node.style.opacity = '0';
       const duration = 100;
@@ -111,7 +116,7 @@ class FadeInEffect extends BaseEffect {
 }
 
 class SlideInEffect extends BaseEffect {
-  async apply(node: HTMLElement, index: number, speed: number): Promise<void> {
+  async apply(node: HTMLElement, index: number, _speed: number): Promise<void> {
     return new Promise((resolve) => {
       node.style.transform = 'translateY(20px)';
       node.style.opacity = '0';
@@ -139,7 +144,7 @@ class SlideInEffect extends BaseEffect {
 }
 
 class GlitchEffect extends BaseEffect {
-  async apply(node: HTMLElement, index: number, speed: number): Promise<void> {
+  async apply(node: HTMLElement, index: number, _speed: number): Promise<void> {
     return new Promise((resolve) => {
       const glitchChars = '!@#$%^&*()_+-={}[]|;:,.<>?';
       const originalChar = node.textContent || '';
@@ -183,7 +188,7 @@ class TypecraftEffect extends BaseEffect {
 }
 
 class RainbowEffect extends BaseEffect {
-  async apply(node: HTMLElement, index: number, speed: number): Promise<void> {
+  async apply(node: HTMLElement, index: number, _speed: number): Promise<void> {
     return new Promise((resolve) => {
       const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
       const text = node.textContent || '';
@@ -209,7 +214,7 @@ class RainbowEffect extends BaseEffect {
 }
 
 class ContinuousEffect extends BaseEffect {
-  apply(node: HTMLElement, index: number, speed: number): Promise<void> {
+  apply(node: HTMLElement, _index: number, _speed: number): Promise<void> {
     return new Promise((resolve) => {
       const animate = (time: number) => {
         const progress = (time % 1000) / 1000; // 1-second loop

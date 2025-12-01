@@ -32,7 +32,7 @@ export const TypecraftOptionsSchema = z.object({
   cursor: CursorOptionsSchema,
   pauseFor: z.number().nonnegative(),
   direction: z.nativeEnum(Direction),
-  textEffect: z.nativeEnum(TextEffect),
+  textEffect: z.union([z.nativeEnum(TextEffect), z.string()]),
   easingFunction: z.function().returns(z.number()),
   html: z.boolean(),
 });

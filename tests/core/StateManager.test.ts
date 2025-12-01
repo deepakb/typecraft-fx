@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StateManager } from '../../src/core/managers/StateManager';
 import {
   TypecraftOptions,
@@ -6,22 +6,19 @@ import {
   QueueActionType,
   EventCallback,
   CursorStyle,
-  Direction,
-  TextEffect,
 } from '../../src/types';
 
 describe('StateManager', () => {
   let stateManager: StateManager;
-  let mockElement: HTMLElement;
-  let mockOptions: TypecraftOptions;
+  let element: HTMLElement;
+  let options: TypecraftOptions;
+  let mockLogger: any;
+  let mockErrorHandler: any;
 
   beforeEach(() => {
-    mockElement = document.createElement('div');
-    mockOptions = {
-      speed: { type: 50, delete: 50, delay: 1500 },
-      strings: ['Test'],
-      loop: false,
-      autoStart: false,
+    element = document.createElement('div');
+    options = {
+      speed: { type: 50, delete: 50, delay: 0 },
       cursor: {
         text: '|',
         color: 'black',
@@ -30,18 +27,22 @@ describe('StateManager', () => {
         style: CursorStyle.Solid,
         blink: true,
       },
-      pauseFor: 1500,
-      direction: Direction.LTR,
-      textEffect: TextEffect.None,
-      easingFunction: (t) => t,
-      html: false,
+    } as TypecraftOptions;
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     };
-    stateManager = new StateManager(mockElement, mockOptions);
+    mockErrorHandler = {
+      handleError: vi.fn(),
+    };
+    stateManager = new StateManager(element, options, mockLogger, mockErrorHandler);
   });
 
   it('should initialize state correctly', () => {
     const state = stateManager.getState();
-    expect(state.element).toBe(mockElement);
+    expect(state.element).toBe(element);
     expect(state.queue).toEqual([]);
     expect(state.visibleNodes).toEqual([]);
     expect(state.lastFrameTime).toBeNull();
@@ -84,20 +85,20 @@ describe('StateManager', () => {
   });
 
   it('should add event listener', () => {
-    const mockCallback: EventCallback = () => {};
+    const mockCallback: EventCallback = () => { };
     stateManager.addEventListener('typeStart', mockCallback);
     expect(stateManager.getEventListeners('typeStart')).toContain(mockCallback);
   });
 
   it('should remove event listener', () => {
-    const mockCallback: EventCallback = () => {};
+    const mockCallback: EventCallback = () => { };
     stateManager.addEventListener('typeStart', mockCallback);
     stateManager.removeEventListener('typeStart', mockCallback);
     expect(stateManager.getEventListeners('typeStart')).not.toContain(mockCallback);
   });
 
   it('should get event listeners', () => {
-    const mockCallback: EventCallback = () => {};
+    const mockCallback: EventCallback = () => { };
     stateManager.addEventListener('typeStart', mockCallback);
     expect(stateManager.getEventListeners('typeStart')).toEqual([mockCallback]);
   });

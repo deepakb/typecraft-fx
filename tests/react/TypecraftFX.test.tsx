@@ -73,7 +73,13 @@ describe('TypecraftFX', () => {
 
     render(<TypecraftFX {...options} />);
 
-    expect(TypecraftEngine).toHaveBeenCalledWith(expect.any(HTMLDivElement), options);
+    expect(TypecraftEngine).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      options,
+      expect.anything(),
+      expect.anything(),
+      expect.anything()
+    );
     expect(mockTypecraft.start).toHaveBeenCalled();
   });
 
@@ -160,7 +166,31 @@ describe('TypecraftFX', () => {
 
     expect(TypecraftEngine).toHaveBeenCalledWith(
       expect.any(HTMLDivElement),
-      expect.objectContaining(options)
+      expect.objectContaining({
+        autoStart: false,
+        cursor: expect.objectContaining({
+          blink: true,
+          blinkSpeed: 530,
+          color: 'black',
+          opacity: { min: 0, max: 1 },
+          style: CursorStyle.Blink,
+          text: '|',
+        }),
+        direction: Direction.LTR,
+        html: false,
+        loop: false,
+        pauseFor: 1500,
+        speed: {
+          delay: 1000,
+          delete: 50,
+          type: 50,
+        },
+        strings: ['Test'],
+        textEffect: TextEffect.None,
+      }),
+      expect.anything(), // logger
+      expect.anything(), // errorHandler
+      expect.anything() // managerFactory
     );
     if (options.autoStart) {
       expect(mockTypecraft.start).toHaveBeenCalled();

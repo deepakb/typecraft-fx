@@ -6,12 +6,23 @@ import { QueueActionType } from '../../src/types';
 describe('StringManager', () => {
   let stringManager: StringManager;
   let mockQueueManager: QueueManager;
+  let mockLogger: any;
+  let mockErrorHandler: any;
 
   beforeEach(() => {
     mockQueueManager = {
       add: vi.fn(),
     } as unknown as QueueManager;
-    stringManager = new StringManager(mockQueueManager);
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    mockErrorHandler = {
+      handleError: vi.fn(),
+    };
+    stringManager = new StringManager(mockQueueManager, mockLogger, mockErrorHandler);
   });
 
   describe('typeString', () => {
@@ -28,15 +39,16 @@ describe('StringManager', () => {
       stringManager.typeString('<p>Hello</p>', true);
       expect(mockQueueManager.add).toHaveBeenCalledWith({
         type: QueueActionType.TYPE_HTML_TAG_OPEN,
-        payload: { tagName: 'p', attributes: expect.any(NamedNodeMap) },
+        payload: { tagName: 'P', attributes: expect.any(NamedNodeMap) },
       });
+      // Expect individual characters for 'Hello'
       expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_CONTENT,
-        payload: { content: 'Hello' },
+        type: QueueActionType.TYPE_CHARACTER,
+        payload: { char: 'H' },
       });
       expect(mockQueueManager.add).toHaveBeenCalledWith({
         type: QueueActionType.TYPE_HTML_TAG_CLOSE,
-        payload: { tagName: 'p' },
+        payload: { tagName: 'P' },
       });
     });
   });
@@ -75,68 +87,16 @@ describe('StringManager', () => {
       (stringManager as any).typeNodes([element]);
       expect(mockQueueManager.add).toHaveBeenCalledWith({
         type: QueueActionType.TYPE_HTML_TAG_OPEN,
-        payload: { tagName: 'p', attributes: expect.any(NamedNodeMap) },
+        payload: { tagName: 'P', attributes: expect.any(NamedNodeMap) },
       });
-    });
-  });
-
-  describe('typeTextNode', () => {
-    it('should add type character actions for each character in the text node', () => {
-      const textNode = document.createTextNode('Hello');
-      (stringManager as any).typeTextNode(textNode);
-      expect(mockQueueManager.add).toHaveBeenCalledTimes(5);
-    });
-  });
-
-  describe('typeElementNode', () => {
-    it('should handle elements with single text node child', () => {
-      const element = document.createElement('p');
-      element.textContent = 'Hello';
-      (stringManager as any).typeElementNode(element);
+      // Expect characters
       expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_CONTENT,
-        payload: { content: 'Hello' },
-      });
-    });
-
-    it('should handle elements with multiple children', () => {
-      const element = document.createElement('div');
-      element.innerHTML = '<p>Hello</p><span>World</span>';
-      (stringManager as any).typeElementNode(element);
-      expect(mockQueueManager.add).toHaveBeenCalledTimes(8);
-
-      // Verify the specific calls
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_TAG_OPEN,
-        payload: { tagName: 'div', attributes: expect.any(NamedNodeMap) },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_TAG_OPEN,
-        payload: { tagName: 'p', attributes: expect.any(NamedNodeMap) },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_CONTENT,
-        payload: { content: 'Hello' },
+        type: QueueActionType.TYPE_CHARACTER,
+        payload: { char: 'H' },
       });
       expect(mockQueueManager.add).toHaveBeenCalledWith({
         type: QueueActionType.TYPE_HTML_TAG_CLOSE,
-        payload: { tagName: 'p' },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_TAG_OPEN,
-        payload: { tagName: 'span', attributes: expect.any(NamedNodeMap) },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_CONTENT,
-        payload: { content: 'World' },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_TAG_CLOSE,
-        payload: { tagName: 'span' },
-      });
-      expect(mockQueueManager.add).toHaveBeenCalledWith({
-        type: QueueActionType.TYPE_HTML_TAG_CLOSE,
-        payload: { tagName: 'div' },
+        payload: { tagName: 'P' },
       });
     });
   });

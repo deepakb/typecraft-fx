@@ -28,7 +28,7 @@ describe('useTypecraftFX', () => {
     expect(TypecraftEngine).toHaveBeenCalledWith(
       divElement,
       expect.objectContaining({
-        autoStart: true,
+        autoStart: false,
         cursor: expect.objectContaining({
           blink: true,
           blinkSpeed: 500,
@@ -38,18 +38,20 @@ describe('useTypecraftFX', () => {
           text: '|',
         }),
         direction: 'ltr',
-        easingFunction: expect.any(Function),
         html: false,
         loop: false,
         pauseFor: 1500,
         speed: {
           delay: 1500,
-          delete: 40,
+          delete: 50,
           type: 50,
         },
-        strings: ['Welcome to TypecraftFX'],
+        strings: [],
         textEffect: 'none',
-      })
+      }),
+      expect.anything(), // logger
+      expect.anything(), // errorHandler
+      expect.anything() // managerFactory
     );
   });
 

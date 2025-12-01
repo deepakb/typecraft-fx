@@ -1,12 +1,23 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EasingManager } from '../../src/core/managers/EasingManager';
 import { CursorStyle, Direction, TextEffect, TypecraftOptions } from '../../src/types';
 
 describe('EasingManager', () => {
   let easingManager: EasingManager;
   let defaultOptions: TypecraftOptions;
+  let mockLogger: any;
+  let mockErrorHandler: any;
 
   beforeEach(() => {
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    mockErrorHandler = {
+      handleError: vi.fn(),
+    };
     defaultOptions = {
       strings: [],
       speed: { type: 50, delete: 50, delay: 1500 },
@@ -26,7 +37,7 @@ describe('EasingManager', () => {
       easingFunction: (t: number) => t,
       html: false,
     };
-    easingManager = new EasingManager(defaultOptions);
+    easingManager = new EasingManager(defaultOptions, mockLogger, mockErrorHandler);
   });
 
   it('should use default easing function when no custom function is provided', () => {
@@ -37,7 +48,7 @@ describe('EasingManager', () => {
   it('should use custom easing function when provided', () => {
     const customEasing = (t: number) => t * t;
     defaultOptions.easingFunction = customEasing;
-    easingManager = new EasingManager(defaultOptions);
+    easingManager = new EasingManager(defaultOptions, mockLogger, mockErrorHandler);
     const result = easingManager.getEasing()(0.5);
     expect(result).toBe(0.25);
   });

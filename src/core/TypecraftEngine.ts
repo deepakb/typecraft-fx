@@ -12,6 +12,7 @@ import {
   CursorOptions,
   SpeedOptions,
   TypecraftContext,
+  CursorStyle,
 } from '../types';
 import { CursorManager, ICursorManager } from './managers/CursorManager';
 import { IQueueManager } from './managers/QueueManager';
@@ -31,8 +32,9 @@ export interface ITypecraftEngine {
   getElement(): HTMLElement;
   setEasingFunction(easing: EasingFunction): this;
   setDirection(direction: Direction): this;
-  changeCursor(cursorOptions: Partial<CursorOptions>): void;
-  setTextEffect(effect: TextEffect): this;
+  changeCursor(cursorOptions: Partial<CursorOptions>): this;
+  changeCursorStyle(style: CursorStyle): this;
+  setTextEffect(effect: TextEffect | string): this;
   pauseFor(ms: number): this;
   start(): Promise<void>;
   stop(): void;
@@ -42,12 +44,12 @@ export interface ITypecraftEngine {
   typeAllStrings(): this;
   registerCustomEffect(name: string, effectFunction: CustomEffectFunction): this;
   typeString(string: string): this;
-  deleteChars(numChars?: number): Promise<void>;
+  deleteChars(numChars?: number): this;
+  deleteAll(): this;
   typeAndReplace(words: string[], delay?: number): this;
 }
 
 export class TypecraftEngine implements ITypecraftEngine {
-  private options: TypecraftOptions;
   private cursorManager: ICursorManager;
   private queueManager: IQueueManager;
   private effectManager: IEffectManager;
@@ -59,6 +61,10 @@ export class TypecraftEngine implements ITypecraftEngine {
   private rafId: number | null = null;
   private lastFrameTime: number = 0;
 
+  private get options(): TypecraftOptions {
+    return this.optionsManager.getOptions();
+  }
+
   constructor(
     element: string | HTMLElement,
     options: Partial<TypecraftOptions> = {},
@@ -69,7 +75,6 @@ export class TypecraftEngine implements ITypecraftEngine {
     try {
       const htmlElement = this.validateElement(element);
       this.optionsManager = this.managerFactory.createOptionsManager(htmlElement, options);
-      this.options = this.optionsManager.getOptions();
       this.stateManager = this.managerFactory.createStateManager(htmlElement, this.options);
       this.queueManager = this.managerFactory.createQueueManager();
       this.easingManager = this.managerFactory.createEasingManager(this.options);
@@ -169,7 +174,7 @@ export class TypecraftEngine implements ITypecraftEngine {
       typeHtmlTagOpen: this.typeHtmlTagOpen.bind(this),
       typeHtmlContent: this.typeHtmlContent.bind(this),
       typeHtmlTagClose: this.typeHtmlTagClose.bind(this),
-      deleteChars: this.deleteChars.bind(this),
+      deleteChars: this.executeDeleteChars.bind(this),
       wait: this.wait.bind(this),
       typeString: this.typeString.bind(this),
       emit: (eventName: TypecraftEvent, payload?: any) => this.emit(eventName, payload),
@@ -341,7 +346,7 @@ export class TypecraftEngine implements ITypecraftEngine {
     }
   }
 
-  private async applyTextEffect(effect: TextEffect): Promise<void> {
+  private async applyTextEffect(effect: TextEffect | string): Promise<void> {
     if (effect === TextEffect.None) {
       return;
     }
@@ -382,12 +387,18 @@ export class TypecraftEngine implements ITypecraftEngine {
     return this;
   }
 
-  public changeCursor(cursorOptions: Partial<CursorOptions>): void {
+  public changeCursor(cursorOptions: Partial<CursorOptions>): this {
     this.cursorManager.changeCursor(cursorOptions);
+    return this;
   }
 
-  public setTextEffect(effect: TextEffect): this {
-    this.optionsManager.updateOptions({ textEffect: effect });
+  public changeCursorStyle(style: CursorStyle): this {
+    this.changeCursor({ style });
+    return this;
+  }
+
+  public setTextEffect(effect: TextEffect | string): this {
+    this.optionsManager.updateOptions({ textEffect: effect as TextEffect });
     return this;
   }
 
@@ -501,7 +512,23 @@ export class TypecraftEngine implements ITypecraftEngine {
     return this;
   }
 
-  public async deleteChars(numChars: number = 1): Promise<void> {
+  public deleteChars(numChars: number = 1): this {
+    this.queueManager.add({
+      type: QueueActionType.DELETE_CHARACTERS,
+      payload: { numChars },
+    });
+    return this;
+  }
+
+  public deleteAll(): this {
+    this.queueManager.add({
+      type: QueueActionType.DELETE_ALL,
+      payload: {},
+    });
+    return this;
+  }
+
+  private async executeDeleteChars(numChars: number = 1): Promise<void> {
     this.logger.info('Deleting characters:', { numChars });
     const state = this.stateManager.getState();
 
