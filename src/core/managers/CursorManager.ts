@@ -3,6 +3,7 @@ import { ErrorSeverity } from '../error/TypecraftError';
 import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { CursorOptionsSchema } from '../../validators/TypecraftOptionsSchema';
 import { ErrorHandler } from '../../utils/ErrorHandler';
+import { IDomManager } from './DomManager';
 
 export interface ICursorManager {
   getCursorElement(): HTMLElement;
@@ -31,6 +32,7 @@ export class CursorManager implements ICursorManager {
   constructor(
     parentElement: HTMLElement,
     options: CursorOptions,
+    private domManager: IDomManager,
     private logger: ITypecraftLogger,
     private errorHandler: ErrorHandler,
     animationFrameProvider?: (callback: FrameRequestCallback) => number
@@ -38,7 +40,7 @@ export class CursorManager implements ICursorManager {
     this.validateParentElement(parentElement);
     this.options = CursorOptionsSchema.parse(options);
     this.cursorNode = this.createCursorNode();
-    parentElement.appendChild(this.cursorNode);
+    this.domManager.appendChild(parentElement, this.cursorNode);
     this.animationFrameProvider =
       animationFrameProvider || window.requestAnimationFrame.bind(window);
     this.logger.info('CursorManager initialized successfully');
@@ -51,9 +53,9 @@ export class CursorManager implements ICursorManager {
   public updateCursorPosition(element: HTMLElement): void {
     this.validateElement(element);
     if (this.cursorNode.parentNode) {
-      this.cursorNode.parentNode.removeChild(this.cursorNode);
+      this.domManager.removeElement(this.cursorNode);
     }
-    element.appendChild(this.cursorNode);
+    this.domManager.appendChild(element, this.cursorNode);
     this.logger.debug('Cursor position updated', { element });
   }
 
@@ -69,7 +71,7 @@ export class CursorManager implements ICursorManager {
       this.isBlinking = true;
       this.lastBlinkTime = performance.now();
       this.cursorBlinkState = true;
-      this.cursorNode.style.opacity = this.options.opacity.max.toString();
+      this.domManager.setStyle(this.cursorNode, 'opacity', this.options.opacity.max.toString());
       this.animateCursor();
     }
   }
@@ -90,9 +92,10 @@ export class CursorManager implements ICursorManager {
     const delta = currentTime - this.lastBlinkTime;
     if (delta >= this.options.blinkSpeed) {
       this.cursorBlinkState = !this.cursorBlinkState;
-      this.cursorNode.style.opacity = this.cursorBlinkState
+      const opacity = this.cursorBlinkState
         ? this.options.opacity.max.toString()
         : this.options.opacity.min.toString();
+      this.domManager.setStyle(this.cursorNode, 'opacity', opacity);
       this.lastBlinkTime = currentTime;
     }
   }
@@ -110,7 +113,7 @@ export class CursorManager implements ICursorManager {
   public remove(): void {
     this.stopBlinking();
     if (this.cursorNode.parentNode) {
-      this.cursorNode.parentNode.removeChild(this.cursorNode);
+      this.domManager.removeElement(this.cursorNode);
     }
   }
 
@@ -118,11 +121,11 @@ export class CursorManager implements ICursorManager {
     this.validatePartialCursorOptions(cursorOptions);
     if (cursorOptions.text !== undefined) {
       this.options.text = cursorOptions.text;
-      this.cursorNode.textContent = cursorOptions.text;
+      this.domManager.setTextContent(this.cursorNode, cursorOptions.text);
     }
     if (cursorOptions.color !== undefined) {
       this.options.color = cursorOptions.color;
-      this.cursorNode.style.color = cursorOptions.color;
+      this.domManager.setStyle(this.cursorNode, 'color', cursorOptions.color);
     }
     if (cursorOptions.style !== undefined) {
       this.options.style = cursorOptions.style;
@@ -157,16 +160,16 @@ export class CursorManager implements ICursorManager {
 
   public updateCursorStyle(): void {
     this.cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.style}`;
-    this.cursorNode.style.color = this.options.color;
+    this.domManager.setStyle(this.cursorNode, 'color', this.options.color);
     this.logger.debug('Cursor style updated');
   }
 
   private createCursorNode(): HTMLElement {
-    const cursorNode = document.createElement('span');
-    cursorNode.textContent = this.options.text;
-    cursorNode.style.color = this.options.color;
+    const cursorNode = this.domManager.createElement('span');
+    this.domManager.setTextContent(cursorNode, this.options.text);
+    this.domManager.setStyle(cursorNode, 'color', this.options.color);
     cursorNode.className = `typecraft-cursor typecraft-cursor-${this.options.style}`;
-    cursorNode.style.opacity = this.options.opacity.max.toString();
+    this.domManager.setStyle(cursorNode, 'opacity', this.options.opacity.max.toString());
     return cursorNode;
   }
 
@@ -177,9 +180,10 @@ export class CursorManager implements ICursorManager {
     if (timeSinceLastBlink >= this.options.blinkSpeed) {
       this.cursorBlinkState = !this.cursorBlinkState;
       this.lastBlinkTime = now;
-      this.cursorNode.style.opacity = this.cursorBlinkState
+      const opacity = this.cursorBlinkState
         ? this.options.opacity.max.toString()
         : this.options.opacity.min.toString();
+      this.domManager.setStyle(this.cursorNode, 'opacity', opacity);
     }
 
     if (this.isBlinking) {

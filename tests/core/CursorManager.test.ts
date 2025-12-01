@@ -1,6 +1,7 @@
 import { CursorManager } from '../../src/core/managers/CursorManager';
 import { CursorOptions, CursorStyle } from '../../src/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { IDomManager } from '../../src/core/managers/DomManager';
 
 describe('CursorManager', () => {
   let parentElement: HTMLElement;
@@ -9,6 +10,7 @@ describe('CursorManager', () => {
   let animationFrameCallback: FrameRequestCallback | null;
   let mockLogger: any;
   let mockErrorHandler: any;
+  let mockDomManager: IDomManager;
 
   const customRequestAnimationFrame = (callback: FrameRequestCallback): number => {
     animationFrameCallback = callback;
@@ -40,6 +42,27 @@ describe('CursorManager', () => {
     mockErrorHandler = {
       handleError: vi.fn(),
     };
+
+    mockDomManager = {
+      createElement: <K extends keyof HTMLElementTagNameMap>(tagName: K) => document.createElement(tagName),
+      createTextNode: (content: string) => document.createTextNode(content),
+      appendChild: (parent: Node, child: Node) => parent.appendChild(child),
+      insertBefore: (parent: Node, newNode: Node, referenceNode: Node | null) => parent.insertBefore(newNode, referenceNode),
+      removeElement: (element: Node) => {
+        if (element.parentNode) {
+          element.parentNode.removeChild(element);
+        }
+      },
+      setAttribute: (element: Element, name: string, value: string) => element.setAttribute(name, value),
+      setTextContent: (element: Node, content: string) => { element.textContent = content; },
+      setStyle: (element: HTMLElement, property: string, value: string) => { (element.style as any)[property] = value; },
+      createLineBreak: () => document.createElement('br'),
+      createSpace: () => {
+        const span = document.createElement('span');
+        span.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
+        return span;
+      },
+    };
   });
 
   afterEach(() => {
@@ -48,7 +71,7 @@ describe('CursorManager', () => {
   });
 
   it('constructor creates and appends cursor element', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, defaultOptions, mockDomManager, mockLogger, mockErrorHandler);
     expect(parentElement.children.length).toBe(1);
     const cursorElement = cursorManager.getCursorElement();
     expect(cursorElement).toBeInstanceOf(HTMLSpanElement);
@@ -66,7 +89,7 @@ describe('CursorManager', () => {
       opacity: { min: 0, max: 1 },
       style: CursorStyle.Solid,
       blink: true,
-    }, mockLogger, mockErrorHandler);
+    }, mockDomManager, mockLogger, mockErrorHandler);
 
     const animateCursorSpy = vi.spyOn(cursorManager as any, 'animateCursor');
 
@@ -80,7 +103,7 @@ describe('CursorManager', () => {
 
   it('startBlinking does not start animation for non-blink option', () => {
     const nonBlinkOptions = { ...defaultOptions, blink: false };
-    const cursorManager = new CursorManager(parentElement, nonBlinkOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, nonBlinkOptions, mockDomManager, mockLogger, mockErrorHandler);
     const animateCursorSpy = vi.spyOn(cursorManager as any, 'animateCursor');
 
     cursorManager.startBlinking();
@@ -92,7 +115,7 @@ describe('CursorManager', () => {
     const cursorManager = new CursorManager(parentElement, {
       ...defaultOptions,
       blink: true,
-    }, mockLogger, mockErrorHandler);
+    }, mockDomManager, mockLogger, mockErrorHandler);
 
     const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
 
@@ -115,7 +138,7 @@ describe('CursorManager', () => {
   });
 
   it('changeCursorStyle updates class', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, defaultOptions, mockDomManager, mockLogger, mockErrorHandler);
 
     cursorManager.changeCursorStyle(CursorStyle.Blink);
 
@@ -125,7 +148,7 @@ describe('CursorManager', () => {
   });
 
   it('updateCursorPosition updates cursor position', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, defaultOptions, mockDomManager, mockLogger, mockErrorHandler);
     const targetElement = document.createElement('div');
 
     cursorManager.updateCursorPosition(targetElement);
@@ -136,7 +159,7 @@ describe('CursorManager', () => {
 
   it('remove stops blinking and removes cursor element', () => {
     const blinkOptions = { ...defaultOptions, blink: true };
-    const cursorManager = new CursorManager(parentElement, blinkOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, blinkOptions, mockDomManager, mockLogger, mockErrorHandler);
     const stopBlinkingSpy = vi.spyOn(cursorManager, 'stopBlinking');
 
     cursorManager.remove();
@@ -149,6 +172,7 @@ describe('CursorManager', () => {
     const cursorManager = new CursorManager(
       parentElement,
       defaultOptions,
+      mockDomManager,
       mockLogger,
       mockErrorHandler,
       customRequestAnimationFrame
@@ -181,6 +205,7 @@ describe('CursorManager', () => {
     const cursorManager = new CursorManager(
       parentElement,
       defaultOptions,
+      mockDomManager,
       mockLogger,
       mockErrorHandler,
       customRequestAnimationFrame
@@ -206,7 +231,7 @@ describe('CursorManager', () => {
   });
 
   it('getCursorElement returns the cursor element', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, defaultOptions, mockDomManager, mockLogger, mockErrorHandler);
     const cursorElement = cursorManager.getCursorElement();
     expect(cursorElement).toBeInstanceOf(HTMLSpanElement);
     expect(cursorElement.className).toContain('typecraft-cursor');
@@ -214,7 +239,7 @@ describe('CursorManager', () => {
 
   it('remove stops blinking and removes cursor element when parent exists', () => {
     const blinkOptions = { ...defaultOptions, blink: true };
-    const cursorManager = new CursorManager(parentElement, blinkOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, blinkOptions, mockDomManager, mockLogger, mockErrorHandler);
     const stopBlinkingSpy = vi.spyOn(cursorManager, 'stopBlinking');
 
     cursorManager.remove();
@@ -224,7 +249,7 @@ describe('CursorManager', () => {
   });
 
   it('remove handles case when cursor element has no parent', () => {
-    const cursorManager = new CursorManager(parentElement, defaultOptions, mockLogger, mockErrorHandler);
+    const cursorManager = new CursorManager(parentElement, defaultOptions, mockDomManager, mockLogger, mockErrorHandler);
     parentElement.removeChild(cursorManager.getCursorElement());
 
     expect(() => cursorManager.remove()).not.toThrow();

@@ -10,12 +10,14 @@ import {
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock the managers
-vi.mock('../../src/core/CursorManager');
-vi.mock('../../src/core/QueueManager');
-vi.mock('../../src/core/EffectsManager');
-vi.mock('../../src/core/StringManager');
-vi.mock('../../src/core/SpeedManager');
-vi.mock('../../src/core/EasingManager');
+vi.mock('../../src/core/managers/CursorManager');
+vi.mock('../../src/core/managers/QueueManager');
+vi.mock('../../src/core/managers/EffectManager');
+vi.mock('../../src/core/managers/StringManager');
+vi.mock('../../src/core/managers/SpeedManager');
+vi.mock('../../src/core/managers/EasingManager');
+vi.mock('../../src/core/managers/DomManager');
+vi.mock('../../src/core/managers/TimeManager');
 vi.mock('../../src/core/logging/TypecraftLogger');
 vi.mock('../../src/utils/ErrorHandler');
 vi.mock('../../src/core/factories/ManagerFactory');
@@ -23,6 +25,8 @@ vi.mock('../../src/core/factories/ManagerFactory');
 import { ITypecraftLogger } from '../../src/core/logging/TypecraftLogger';
 import { ErrorHandler } from '../../src/utils/ErrorHandler';
 import { IManagerFactory } from '../../src/core/factories/ManagerFactory';
+import { IDomManager } from '../../src/core/managers/DomManager';
+import { ITimeManager } from '../../src/core/managers/TimeManager';
 
 describe('TypecraftEngine', () => {
   let engine: TypecraftEngine;
@@ -30,6 +34,8 @@ describe('TypecraftEngine', () => {
   let logger: ITypecraftLogger;
   let errorHandler: ErrorHandler;
   let managerFactory: IManagerFactory;
+  let domManager: IDomManager;
+  let timeManager: ITimeManager;
   let options: Partial<TypecraftOptions>;
 
   beforeEach(() => {
@@ -43,6 +49,25 @@ describe('TypecraftEngine', () => {
     errorHandler = {
       handleError: vi.fn(),
     } as unknown as ErrorHandler;
+
+    domManager = {
+      createElement: vi.fn().mockImplementation((tagName) => document.createElement(tagName)),
+      createTextNode: vi.fn().mockImplementation((content) => document.createTextNode(content)),
+      appendChild: vi.fn(),
+      insertBefore: vi.fn(),
+      removeElement: vi.fn(),
+      setAttribute: vi.fn(),
+      setTextContent: vi.fn(),
+      setStyle: vi.fn(),
+      createLineBreak: vi.fn().mockReturnValue(document.createElement('br')),
+      createSpace: vi.fn().mockReturnValue(document.createElement('span')),
+    } as unknown as IDomManager;
+
+    timeManager = {
+      startLoop: vi.fn(),
+      stopLoop: vi.fn(),
+      wait: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ITimeManager;
 
     options = {
       strings: ['Hello, World!'],
@@ -106,6 +131,8 @@ describe('TypecraftEngine', () => {
         changeCursor: vi.fn(),
         getCursorElement: vi.fn(),
       }),
+      createDomManager: vi.fn().mockReturnValue(domManager),
+      createTimeManager: vi.fn().mockReturnValue(timeManager),
     } as unknown as IManagerFactory;
 
     document.body.appendChild(element);
@@ -170,6 +197,7 @@ describe('TypecraftEngine', () => {
       engine.setDirection(Direction.RTL);
       expect(engine['options'].direction).toBe(Direction.RTL);
       expect(setDirectionSpy).toHaveBeenCalled();
+      expect(domManager.setStyle).toHaveBeenCalledWith(element, 'direction', Direction.RTL);
     });
 
     it('should set speed', () => {
@@ -220,12 +248,11 @@ describe('TypecraftEngine', () => {
     });
 
     it('should stop typing', () => {
-      engine['rafId'] = 1;
       const clearSpy = vi.spyOn(engine['queueManager'], 'clear');
-      const cancelAnimationFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+      const stopLoopSpy = vi.spyOn(timeManager, 'stopLoop');
       engine.stop();
       expect(clearSpy).toHaveBeenCalled();
-      expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(1);
+      expect(stopLoopSpy).toHaveBeenCalled();
     });
 
     it('should add event listener', () => {
@@ -338,19 +365,13 @@ describe('TypecraftEngine', () => {
       vi.spyOn(engine as any, 'applyTextEffect').mockResolvedValue(undefined);
       vi.spyOn(engine as any, 'emit').mockImplementation(() => { });
 
-      // Use fake timers
-      vi.useFakeTimers();
-
       const typePromise = (engine as any).typeCharacter({ char: 'A' });
-
-      // Fast-forward time
-      vi.advanceTimersByTime(50);
 
       await typePromise;
 
-      expect(testElement.textContent).toBe('A');
-
-      vi.useRealTimers();
+      expect(domManager.createElement).toHaveBeenCalledWith('span');
+      expect(domManager.appendChild).toHaveBeenCalled();
+      expect(timeManager.wait).toHaveBeenCalled();
     });
 
     it('should delete character', async () => {
@@ -371,13 +392,11 @@ describe('TypecraftEngine', () => {
         state.visibleNodes.pop();
       });
 
-      vi.useFakeTimers();
       const deletePromise = (engine as any).executeDeleteChars(1);
-      vi.advanceTimersByTime(50);
       await deletePromise;
 
-      expect(span.textContent).toBe('Tes');
-      vi.useRealTimers();
+      expect(domManager.setTextContent).toHaveBeenCalled();
+      expect(timeManager.wait).toHaveBeenCalled();
     });
 
     // it('should apply text effect', async () => {

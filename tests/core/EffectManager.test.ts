@@ -3,10 +3,12 @@ import { EffectManager } from '../../src/core/managers/EffectManager';
 import { EasingManager } from '../../src/core/managers/EasingManager';
 import { TextEffect } from '../../src/types';
 import { EffectFactory } from '../../src/core/factories/EffectFactory';
+import { IDomManager } from '../../src/core/managers/DomManager';
 
 describe('EffectManager', () => {
   let effectManager: EffectManager;
   let mockEasingManager: EasingManager;
+  let mockDomManager: IDomManager;
   let mockNode: HTMLElement;
   let mockLogger: any;
   let mockErrorHandler: any;
@@ -24,7 +26,23 @@ describe('EffectManager', () => {
     mockEasingManager = {
       applyEasing: vi.fn().mockReturnValue(0.5),
     } as any;
-    effectManager = new EffectManager(mockEasingManager, mockLogger, mockErrorHandler);
+
+    mockDomManager = {
+      createElement: vi.fn(),
+      createTextNode: vi.fn(),
+      appendChild: vi.fn(),
+      insertBefore: vi.fn(),
+      removeElement: vi.fn(),
+      setAttribute: vi.fn(),
+      setTextContent: vi.fn(),
+      setStyle: vi.fn().mockImplementation((element, property, value) => {
+        (element.style as any)[property] = value;
+      }),
+      createLineBreak: vi.fn(),
+      createSpace: vi.fn(),
+    } as unknown as IDomManager;
+
+    effectManager = new EffectManager(mockEasingManager, mockDomManager, mockLogger, mockErrorHandler);
     mockNode = document.createElement('div');
     vi.useFakeTimers();
   });
@@ -113,7 +131,11 @@ describe('EffectManager', () => {
       mockNode.style.opacity = '0.5';
       effectManager.resetEffectStyles(nodes, TextEffect.FadeIn);
 
-      expect(mockNode.style.opacity).toBe('');
+      expect(mockDomManager.setStyle).toHaveBeenCalledWith(mockNode, 'transition', '');
+      expect(mockDomManager.setStyle).toHaveBeenCalledWith(mockNode, 'transform', '');
+      expect(mockDomManager.setStyle).toHaveBeenCalledWith(mockNode, 'opacity', '');
+      expect(mockDomManager.setStyle).toHaveBeenCalledWith(mockNode, 'visibility', '');
+      expect(mockDomManager.setStyle).toHaveBeenCalledWith(mockNode, 'color', '');
     });
 
     it('should not reset color for rainbow effect', () => {
@@ -121,7 +143,7 @@ describe('EffectManager', () => {
       mockNode.style.color = 'red';
       effectManager.resetEffectStyles(nodes, TextEffect.Rainbow);
 
-      expect(mockNode.style.color).toBe('red');
+      expect(mockDomManager.setStyle).not.toHaveBeenCalledWith(mockNode, 'color', '');
     });
   });
 });

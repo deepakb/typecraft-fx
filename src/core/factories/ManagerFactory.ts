@@ -6,6 +6,8 @@ import { IQueueManager, QueueManager } from '../managers/QueueManager';
 import { ISpeedManager, SpeedManager } from '../managers/SpeedManager';
 import { IStateManager, StateManager } from '../managers/StateManager';
 import { IStringManager, StringManager } from '../managers/StringManager';
+import { IDomManager, DomManager } from '../managers/DomManager';
+import { ITimeManager, TimeManager } from '../managers/TimeManager';
 import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { CursorOptions, SpeedOptions, TypecraftOptions } from '../../types';
 import { ErrorHandler } from '../../utils/ErrorHandler';
@@ -15,10 +17,12 @@ export interface IManagerFactory {
   createStateManager(element: HTMLElement, options: TypecraftOptions): IStateManager;
   createQueueManager(): IQueueManager;
   createEasingManager(options: TypecraftOptions): IEasingManager;
-  createEffectManager(easingManager: IEasingManager): IEffectManager;
+  createEffectManager(easingManager: IEasingManager, domManager: IDomManager): IEffectManager;
   createStringManager(queueManager: IQueueManager): IStringManager;
   createSpeedManager(speedOptions: SpeedOptions): ISpeedManager;
-  createCursorManager(element: HTMLElement, cursorOptions: CursorOptions): ICursorManager;
+  createCursorManager(element: HTMLElement, cursorOptions: CursorOptions, domManager: IDomManager): ICursorManager;
+  createDomManager(): IDomManager;
+  createTimeManager(): ITimeManager;
 }
 
 export class ManagerFactory implements IManagerFactory {
@@ -44,8 +48,8 @@ export class ManagerFactory implements IManagerFactory {
     return new EasingManager(options, this.logger, this.errorHandler);
   }
 
-  createEffectManager(easingManager: EasingManager): IEffectManager {
-    return new EffectManager(easingManager, this.logger, this.errorHandler);
+  createEffectManager(easingManager: EasingManager, domManager: IDomManager): IEffectManager {
+    return new EffectManager(easingManager, domManager, this.logger, this.errorHandler);
   }
 
   createStringManager(queueManager: QueueManager): IStringManager {
@@ -56,7 +60,15 @@ export class ManagerFactory implements IManagerFactory {
     return new SpeedManager(speedOptions, this.logger, this.errorHandler);
   }
 
-  createCursorManager(element: HTMLElement, cursorOptions: CursorOptions): ICursorManager {
-    return new CursorManager(element, cursorOptions, this.logger, this.errorHandler);
+  createCursorManager(element: HTMLElement, cursorOptions: CursorOptions, domManager: IDomManager): ICursorManager {
+    return new CursorManager(element, cursorOptions, domManager, this.logger, this.errorHandler);
+  }
+
+  createDomManager(): IDomManager {
+    return new DomManager();
+  }
+
+  createTimeManager(): ITimeManager {
+    return new TimeManager();
   }
 }

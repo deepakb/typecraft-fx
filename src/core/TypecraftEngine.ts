@@ -14,7 +14,7 @@ import {
   TypecraftContext,
   CursorStyle,
 } from '../types';
-import { CursorManager, ICursorManager } from './managers/CursorManager';
+import { ICursorManager } from './managers/CursorManager';
 import { IQueueManager } from './managers/QueueManager';
 import { IEffectManager } from './managers/EffectManager';
 import { IOptionsManager } from './managers/OptionsManager';
@@ -22,6 +22,8 @@ import { IStateManager } from './managers/StateManager';
 import { IStringManager } from './managers/StringManager';
 import { ISpeedManager } from './managers/SpeedManager';
 import { IEasingManager } from './managers/EasingManager';
+import { IDomManager } from './managers/DomManager';
+import { ITimeManager } from './managers/TimeManager';
 import { ErrorSeverity } from './error/TypecraftError';
 import { ITypecraftLogger } from './logging/TypecraftLogger';
 import { IManagerFactory } from './factories/ManagerFactory';
@@ -58,8 +60,8 @@ export class TypecraftEngine implements ITypecraftEngine {
   private stringManager: IStringManager;
   private speedManager: ISpeedManager;
   private easingManager: IEasingManager;
-  private rafId: number | null = null;
-  private lastFrameTime: number = 0;
+  private domManager: IDomManager;
+  private timeManager: ITimeManager;
 
   private get options(): TypecraftOptions {
     return this.optionsManager.getOptions();
@@ -74,16 +76,19 @@ export class TypecraftEngine implements ITypecraftEngine {
   ) {
     try {
       const htmlElement = this.validateElement(element);
+      this.domManager = this.managerFactory.createDomManager();
+      this.timeManager = this.managerFactory.createTimeManager();
       this.optionsManager = this.managerFactory.createOptionsManager(htmlElement, options);
       this.stateManager = this.managerFactory.createStateManager(htmlElement, this.options);
       this.queueManager = this.managerFactory.createQueueManager();
       this.easingManager = this.managerFactory.createEasingManager(this.options);
-      this.effectManager = this.managerFactory.createEffectManager(this.easingManager);
+      this.effectManager = this.managerFactory.createEffectManager(this.easingManager, this.domManager);
       this.stringManager = this.managerFactory.createStringManager(this.queueManager);
       this.speedManager = this.managerFactory.createSpeedManager(this.options.speed);
       this.cursorManager = this.managerFactory.createCursorManager(
         this.stateManager.getState().element,
-        this.options.cursor
+        this.options.cursor,
+        this.domManager
       );
 
       this.setSpeed(this.options.speed);
@@ -101,7 +106,7 @@ export class TypecraftEngine implements ITypecraftEngine {
 
   private init(): void {
     const state = this.stateManager.getState();
-    state.element.style.direction = this.options.direction;
+    this.domManager.setStyle(state.element, 'direction', this.options.direction);
 
     this.cursorManager.setupCursor(state.element);
 
@@ -115,18 +120,9 @@ export class TypecraftEngine implements ITypecraftEngine {
   }
 
   private startAnimationLoop(): void {
-    const animate = (currentTime: number) => {
-      if (this.lastFrameTime === 0) {
-        this.lastFrameTime = currentTime;
-      }
-
+    this.timeManager.startLoop((currentTime) => {
       this.update(currentTime);
-
-      this.lastFrameTime = currentTime;
-      this.rafId = window.requestAnimationFrame(animate);
-    };
-
-    this.rafId = window.requestAnimationFrame(animate);
+    });
     this.logger.debug('Animation loop started');
   }
 
@@ -146,15 +142,14 @@ export class TypecraftEngine implements ITypecraftEngine {
   private resetState(): void {
     this.stateManager.clearVisibleNodes();
     const state = this.stateManager.getState();
-    state.element.innerHTML = '';
+    this.domManager.setTextContent(state.element, '');
     if (this.cursorManager) {
       this.cursorManager.remove();
     }
-    this.cursorManager = new CursorManager(
+    this.cursorManager = this.managerFactory.createCursorManager(
       state.element,
       this.options.cursor,
-      this.logger,
-      this.errorHandler
+      this.domManager
     );
     this.cursorManager.updateCursorPosition(state.element);
     this.logger.debug('State reset');
@@ -201,13 +196,13 @@ export class TypecraftEngine implements ITypecraftEngine {
     attributes: NamedNodeMap;
   }): Promise<void> {
     const { tagName, attributes } = payload;
-    const element = document.createElement(tagName);
+    const element = this.domManager.createElement(tagName as keyof HTMLElementTagNameMap);
     for (let i = 0; i < attributes.length; i++) {
       const attr = attributes[i];
-      element.setAttribute(attr.name, attr.value);
+      this.domManager.setAttribute(element, attr.name, attr.value);
     }
     const state = this.stateManager.getState();
-    state.element.insertBefore(element, this.cursorManager.getCursorElement());
+    this.domManager.insertBefore(state.element, element, this.cursorManager.getCursorElement());
     this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: element });
     this.cursorManager.updateCursorPosition(state.element);
     const { type } = this.speedManager.getSpeed();
@@ -284,31 +279,30 @@ export class TypecraftEngine implements ITypecraftEngine {
     const state = this.stateManager.getState();
 
     if (char === '\n') {
-      const br = document.createElement('br');
-      state.element.appendChild(br);
+      const br = this.domManager.createLineBreak();
+      this.domManager.appendChild(state.element, br);
       this.stateManager.updateVisibleNodes({ type: NodeType.LineBreak, node: br });
     } else if (char === '\t') {
-      const tabSpan = document.createElement('span');
-      tabSpan.innerHTML = '&nbsp;&nbsp;&nbsp;&nbsp;';
-      state.element.appendChild(tabSpan);
+      const tabSpan = this.domManager.createSpace();
+      this.domManager.appendChild(state.element, tabSpan);
       this.stateManager.updateVisibleNodes({ type: NodeType.HTMLElement, node: tabSpan });
     } else {
       let lastNode = state.visibleNodes[state.visibleNodes.length - 1];
       if (!lastNode || lastNode.type !== NodeType.Character) {
-        const span = document.createElement('span');
-        state.element.appendChild(span);
+        const span = this.domManager.createElement('span');
+        this.domManager.appendChild(state.element, span);
         if (color) {
-          span.style.color = color;
+          this.domManager.setStyle(span, 'color', color);
         }
         lastNode = { type: NodeType.Character, node: span };
         this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
       }
       if (lastNode.node instanceof HTMLElement) {
         if (color && lastNode.node.style.color !== color) {
-          const span = document.createElement('span');
-          span.style.color = color;
-          span.textContent = char;
-          state.element.appendChild(span);
+          const span = this.domManager.createElement('span');
+          this.domManager.setStyle(span, 'color', color);
+          this.domManager.setTextContent(span, char);
+          this.domManager.appendChild(state.element, span);
           this.stateManager.updateVisibleNodes({ type: NodeType.Character, node: span });
         } else {
           (lastNode.node as HTMLElement).textContent += char;
@@ -319,7 +313,7 @@ export class TypecraftEngine implements ITypecraftEngine {
     this.cursorManager.updateCursorPosition(state.element);
 
     const typeSpeed = this.options.speed.type;
-    await new Promise((resolve) => setTimeout(resolve, typeSpeed));
+    await this.timeManager.wait(typeSpeed);
 
     await this.applyTextEffect(this.options.textEffect);
     this.emit('typeChar', { char });
@@ -332,8 +326,8 @@ export class TypecraftEngine implements ITypecraftEngine {
     if (currentNode && currentNode.type === NodeType.HTMLElement) {
       for (let i = 0; i < content.length; i++) {
         const char = content[i];
-        const textNode = document.createTextNode(char);
-        (currentNode.node as HTMLElement).appendChild(textNode);
+        const textNode = this.domManager.createTextNode(char);
+        this.domManager.appendChild(currentNode.node as HTMLElement, textNode);
         this.stateManager.updateVisibleNodes({
           type: NodeType.Character,
           node: textNode.parentElement as HTMLElement,
@@ -367,12 +361,8 @@ export class TypecraftEngine implements ITypecraftEngine {
   }
 
   private async wait(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.emit('pauseEnd');
-        resolve();
-      }, ms);
-    });
+    await this.timeManager.wait(ms);
+    this.emit('pauseEnd');
   }
 
   public setEasingFunction(easing: EasingFunction): this {
@@ -383,7 +373,7 @@ export class TypecraftEngine implements ITypecraftEngine {
   public setDirection(direction: Direction): this {
     this.options.direction = direction;
     const state = this.stateManager.getState();
-    state.element.style.direction = direction;
+    this.domManager.setStyle(state.element, 'direction', direction);
     return this;
   }
 
@@ -415,7 +405,7 @@ export class TypecraftEngine implements ITypecraftEngine {
       if (this.options.strings.length && !state.queue.length) {
         this.typeAllStrings();
       }
-      if (!this.rafId) {
+      if (!this.stateManager.getState().queue.length) {
         this.startAnimationLoop();
       }
       this.logger.info('TypecraftEngine started');
@@ -431,10 +421,7 @@ export class TypecraftEngine implements ITypecraftEngine {
   }
 
   public stop(): void {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
+    this.timeManager.stopLoop();
     this.queueManager.clear();
     this.logger.info('TypecraftEngine stopped');
   }
@@ -545,18 +532,18 @@ export class TypecraftEngine implements ITypecraftEngine {
           const span = lastNode.node as HTMLElement;
           const text = span.textContent || '';
           if (text.length > 1) {
-            span.textContent = text.slice(0, -1);
+            this.domManager.setTextContent(span, text.slice(0, -1));
             this.logger.debug('Character deleted from span, new content:', {
               el: span.textContent,
             });
           } else {
             this.stateManager.removeLastVisibleNode();
-            span.parentNode?.removeChild(span);
+            this.domManager.removeElement(span);
             this.logger.debug('Span removed');
           }
         } else {
           this.stateManager.removeLastVisibleNode();
-          lastNode.node.parentNode?.removeChild(lastNode.node);
+          this.domManager.removeElement(lastNode.node);
           this.logger.debug('Non-character node removed');
         }
 
@@ -577,7 +564,10 @@ export class TypecraftEngine implements ITypecraftEngine {
     }
 
     // Update the element's text content after deletion
-    state.element.textContent = state.visibleNodes.map((node) => node.node.textContent).join('');
+    this.domManager.setTextContent(
+      state.element,
+      state.visibleNodes.map((node) => node.node.textContent).join('')
+    );
   }
 
   public typeAndReplace(words: string[], delay: number = 1000): this {

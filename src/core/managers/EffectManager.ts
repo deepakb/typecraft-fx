@@ -4,6 +4,7 @@ import { ErrorSeverity } from '../error/TypecraftError';
 import { ITypecraftLogger } from '../logging/TypecraftLogger';
 import { EffectFactory, BaseEffect } from '../factories/EffectFactory';
 import { ErrorHandler } from '../../utils/ErrorHandler';
+import { IDomManager } from './DomManager';
 
 export interface IEffectManager {
   registerCustomEffect(name: string, effectFunction: CustomEffectFunction): void;
@@ -29,6 +30,7 @@ export class EffectManager implements IEffectManager {
 
   constructor(
     easingManager: EasingManager,
+    private domManager: IDomManager,
     private logger: ITypecraftLogger,
     private errorHandler: ErrorHandler
   ) {
@@ -50,7 +52,7 @@ export class EffectManager implements IEffectManager {
   ): Promise<void> {
     this.validateNode(node);
     if (color) {
-      node.style.color = color;
+      this.domManager.setStyle(node, 'color', color);
     }
 
     try {
@@ -110,12 +112,12 @@ export class EffectManager implements IEffectManager {
     }
 
     nodes.forEach((node) => {
-      node.style.transition = '';
-      node.style.transform = '';
-      node.style.opacity = '';
-      node.style.visibility = '';
+      this.domManager.setStyle(node, 'transition', '');
+      this.domManager.setStyle(node, 'transform', '');
+      this.domManager.setStyle(node, 'opacity', '');
+      this.domManager.setStyle(node, 'visibility', '');
       if (effect !== TextEffect.Rainbow) {
-        node.style.color = '';
+        this.domManager.setStyle(node, 'color', '');
       }
     });
     this.logger.debug('Effect styles reset', { effect, nodeCount: nodes.length });
